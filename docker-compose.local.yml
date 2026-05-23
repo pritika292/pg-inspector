@@ -17,15 +17,17 @@ services:
     container_name: pg-inspector-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: pg_inspector
+      POSTGRES_USER: inspector
       POSTGRES_PASSWORD: devpass
       POSTGRES_DB: pg_scenarios
+    # Non-default ports so this can run alongside shortlive's local stack on
+    # the same dev machine without colliding (shortlive uses 5432/6379).
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pg_inspector_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pg_inspector -d pg_scenarios"]
+      test: ["CMD-SHELL", "pg_isready -U inspector -d pg_scenarios"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -35,7 +37,7 @@ services:
     container_name: pg-inspector-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - pg_inspector_redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
