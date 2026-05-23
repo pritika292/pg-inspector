@@ -114,9 +114,19 @@ ensure_role() {
 log "Ensuring role 'inspector_admin'"
 ensure_role inspector_admin "$ADMIN_PWD"
 psql_admin -d pg_scenarios -c "GRANT CREATE ON DATABASE pg_scenarios TO inspector_admin"
+# Postgres 15+ removed CREATE on schema public from the public role. Give it
+# back to inspector_admin so the migration runner can create _migrations and
+# _seed_marker tables (they live in public).
+psql_admin -d pg_scenarios -c "GRANT CREATE, USAGE ON SCHEMA public TO inspector_admin"
 
 log "Ensuring role 'inspector_ro'"
 ensure_role inspector_ro "$RO_PWD"
+# Same story for the read-only role: needs USAGE on public + SELECT on the
+# meta tables so health/diagnostics queries can read _migrations and
+# _seed_marker. Per-table SELECT happens via the default privileges set
+# inside migration 001 for the scenario schemas; for public we grant here.
+psql_admin -d pg_scenarios -c "GRANT USAGE ON SCHEMA public TO inspector_ro"
+psql_admin -d pg_scenarios -c "ALTER DEFAULT PRIVILEGES FOR ROLE inspector_admin IN SCHEMA public GRANT SELECT ON TABLES TO inspector_ro"
 
 # Schema-level USAGE + SELECT grants happen inside migration 001 (Epic 2.2).
 
