@@ -95,6 +95,11 @@ export async function runSeed(client: ClientBase, opts?: { force?: boolean }): P
   await seedInfraStartup(client, rng, esContactEmails);
   await seedEcommerce(client, rng, ftUserIds);
 
+  // ANALYZE so pg_stat_user_tables.n_live_tup is populated immediately.
+  // Without it, the /api/scenarios endpoint reports rowCount=0 until
+  // autovacuum gets around to it.
+  await client.query("ANALYZE");
+
   await client.query("DELETE FROM _seed_marker");
   await client.query("INSERT INTO _seed_marker(version) VALUES($1)", [SEED_VERSION]);
 

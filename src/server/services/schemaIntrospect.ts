@@ -73,12 +73,14 @@ export async function listScenarios(): Promise<OverviewRow[]> {
 
     const out: OverviewRow[] = [];
     for (const s of SCENARIOS) {
-      // Row count via pg_stat_user_tables (reltuples-based). It's an
-      // estimate but cheap. Live COUNT(*) on a multi-million-row table
-      // would be wasteful for a left-pane label.
+      // pg_class.reltuples is the planner's row-count estimate. ANALYZE
+      // updates it synchronously (unlike pg_stat_user_tables which is fed
+      // by the stats collector with a delay).
       const { rows: pgStat } = await pool.query<{ total: string }>(
-        `SELECT COALESCE(SUM(n_live_tup), 0)::text AS total
-         FROM pg_stat_user_tables WHERE schemaname = ANY($1::text[])`,
+        `SELECT COALESCE(SUM(reltuples)::bigint, 0)::text AS total
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = ANY($1::text[]) AND c.relkind = 'r'`,
         [s.schemas],
       );
       out.push({
@@ -176,18 +178,20 @@ export async function getScenarioSchema(slug: string): Promise<ScenarioSchema | 
       [meta.schemas],
     );
 
-    // Row counts per table via pg_stat_user_tables (estimates)
+    // Row counts via pg_class.reltuples (updated synchronously by ANALYZE).
     const { rows: rcRows } = await pool.query<{
       schemaname: string;
       relname: string;
-      n_live_tup: string;
+      reltuples: string;
     }>(
-      `SELECT schemaname, relname, n_live_tup::text
-       FROM pg_stat_user_tables WHERE schemaname = ANY($1::text[])`,
+      `SELECT n.nspname AS schemaname, c.relname, c.reltuples::bigint::text AS reltuples
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = ANY($1::text[]) AND c.relkind = 'r'`,
       [meta.schemas],
     );
     const rowCountMap = new Map(
-      rcRows.map((r) => [`${r.schemaname}.${r.relname}`, Number(r.n_live_tup)]),
+      rcRows.map((r) => [`${r.schemaname}.${r.relname}`, Number(r.reltuples)]),
     );
 
     // Build the column tree
