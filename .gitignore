@@ -15,10 +15,10 @@ plan-*.md
 notes/private/
 docs/private/
 
-# Node
+# Node — `build/` is a SOURCE dir here (Vite/Vitest/Tailwind configs).
+# Build output goes to `dist/`.
 node_modules/
 dist/
-build/
 .vite/
 coverage/
 *.tsbuildinfo

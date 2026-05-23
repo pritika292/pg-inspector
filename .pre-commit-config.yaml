@@ -1,0 +1,44 @@
+# Pre-commit hooks template — copied into every project repo by bootstrap-repo.sh.
+# After cloning a repo with this file, run:  pre-commit install
+# Then every `git commit` runs these checks; commit aborts on failure.
+#
+# This template covers language-agnostic hygiene + secret scanning.
+# Per-project lint/type hooks are added when the project is scaffolded.
+
+repos:
+  # ---- Secret scanning ----
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.0
+    hooks:
+      - id: gitleaks
+        name: gitleaks (block leaked secrets)
+
+  # ---- File hygiene ----
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+        name: detect SSH / TLS private keys
+      - id: check-added-large-files
+        name: block files > 500 KB
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+        exclude: '\.vscode/.*\.json$'
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ---- Shell scripts (only triggers if .sh files change) ----
+  # Uses the locally-installed `shellcheck` binary. The upstream docker-based
+  # hook hangs on the iCloud bind-mount path; the system shellcheck is just
+  # as good and an order of magnitude faster.
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck (.sh files)
+        entry: shellcheck
+        language: system
+        types: [shell]
