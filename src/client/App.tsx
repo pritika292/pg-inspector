@@ -3,6 +3,7 @@ import { TopBar } from "./components/TopBar.js";
 import { ScenarioList } from "./components/ScenarioList.js";
 import { Visualizer } from "./components/Visualizer.js";
 import { TableDataView } from "./components/TableDataView.js";
+import { Toolbox } from "./components/Toolbox.js";
 import type { ScenarioListEntry } from "./lib/types.js";
 
 interface OpenTable {
@@ -57,7 +58,7 @@ export function App(): JSX.Element {
           )}
         </div>
 
-        <BottomToolboxPlaceholder />
+        {scenario ? <Toolbox scenario={scenario} /> : <BottomToolboxPlaceholder />}
       </div>
     </div>
   );
