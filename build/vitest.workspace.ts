@@ -5,7 +5,13 @@ export default defineWorkspace([
   {
     test: {
       name: "server",
-      include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+      include: [
+        "tests/unit/**/*.test.ts",
+        "tests/integration/**/*.test.ts",
+        "tests/db/**/*.test.ts",
+        "tests/services/**/*.test.ts",
+        "tests/routes/**/*.test.ts",
+      ],
       environment: "node",
       pool: "forks",
       // Integration tests share a single Postgres + Redis instance; running
