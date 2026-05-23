@@ -1,3 +1,8 @@
-// Scaffold stub. The real /health server lands in #10.
+import { createApp } from "./app.js";
+
 const port = Number(process.env.PORT) || 3014;
-console.log(`pg-inspector scaffold ready on port ${port}`);
+const app = createApp();
+
+app.listen(port, () => {
+  console.log(`pg-inspector listening on :${port}`);
+});
