@@ -3,114 +3,113 @@
 # Idempotent — safe to re-run on every deploy.
 #
 # Responsibilities:
-#   1. Fetch pg-inspector-ro-password, pg-inspector-admin-password, and
-#      openai-api-key from Azure Key Vault via the VM's Managed Identity.
-#   2. Ensure the pg_scenarios DB and the two project-scoped roles exist
-#      (pg_inspector_admin owns objects + runs migrations + seeds;
-#       pg_inspector_ro is the HTTP server's only DB identity).
-#   3. Write /opt/pritika/_infra/pg-inspector.env (mode 600) so docker
+#   1. Ensure the pg_scenarios DB and two project-scoped Postgres roles exist
+#      (inspector_admin owns objects + runs migrations + seeds;
+#       inspector_ro is the HTTP server's only DB identity).
+#   2. Write /opt/pritika/_infra/pg-inspector.env (mode 600) so docker
 #      compose can env_file it.
 #
-# Reads POSTGRES_PASSWORD from /opt/pritika/_infra/.env. That file is
-# materialized by an earlier setup-vm.sh (pre-dating this repo) and contains
-# the postgres superuser password.
+# Secrets are passed IN via env vars from the local az-driven deploy script:
+#   - INSPECTOR_RO_PWD       (the read-only role's password)
+#   - INSPECTOR_ADMIN_PWD    (the admin role's password — used by migrate+seed)
+#   - OPENAI_KEY             (fed into the env file; the boot guard verifies it)
+#
+# Plus from the shared /opt/pritika/_infra/.env:
+#   - POSTGRES_PASSWORD      (postgres superuser, used to CREATE DB + ROLE)
+#
+# psql output is silenced (-q + redirect) so no role/password literal ever
+# reaches stdout/stderr. If a psql statement fails, ON_ERROR_STOP aborts the
+# script with a non-zero exit and a generic message; root-cause investigation
+# happens by running the script locally with set -x against a scratch DB.
 
 set -euo pipefail
 
-VAULT="${VAULT:-pritika-portfolio-kv}"
 INFRA_ENV="/opt/pritika/_infra/.env"
 PROJECT_ENV="/opt/pritika/_infra/pg-inspector.env"
 
 log() { printf "[bootstrap-pg-inspector] %s\n" "$*"; }
+die() { printf "[bootstrap-pg-inspector] ERROR: %s\n" "$*" >&2; exit 1; }
 
-if [ ! -f "$INFRA_ENV" ]; then
-  echo "ERROR: $INFRA_ENV not found — VM is not yet bootstrapped for the portfolio stack." >&2
-  exit 1
-fi
+[ -f "$INFRA_ENV" ] || die "$INFRA_ENV not found — VM portfolio stack not bootstrapped"
 
 set -a
 # shellcheck source=/dev/null
 . "$INFRA_ENV"
 set +a
 
-if [ -z "${POSTGRES_PASSWORD:-}" ]; then
-  echo "ERROR: POSTGRES_PASSWORD missing from $INFRA_ENV" >&2
-  exit 1
-fi
+[ -n "${POSTGRES_PASSWORD:-}" ]    || die "POSTGRES_PASSWORD missing from $INFRA_ENV"
+[ -n "${INSPECTOR_RO_PWD:-}" ]     || die "INSPECTOR_RO_PWD env var not set by caller"
+[ -n "${INSPECTOR_ADMIN_PWD:-}" ]  || die "INSPECTOR_ADMIN_PWD env var not set by caller"
+[ -n "${OPENAI_KEY:-}" ]           || die "OPENAI_KEY env var not set by caller"
 
-log "Logging in with Managed Identity to read Key Vault secrets"
-az login --identity --output none
-
-fetch() {
-  az keyvault secret show --vault-name "$VAULT" --name "$1" --query value -o tsv
-}
-
-RO_PWD="$(fetch pg-inspector-ro-password)"
-ADMIN_PWD="$(fetch pg-inspector-admin-password)"
-OPENAI_KEY="$(fetch openai-api-key || echo "sk-placeholder-replace-me")"
-
-if [ -z "$RO_PWD" ] || [ -z "$ADMIN_PWD" ]; then
-  echo "ERROR: required Key Vault secrets are missing" >&2
-  exit 1
-fi
-
-# Helper that runs a single SQL statement as the postgres superuser.
+# psql wrapper. Quiet + ON_ERROR_STOP + ignore notice/info noise. stdout
+# discarded; stderr redacted so no SQL literal ever surfaces.
 psql_admin() {
   PGPASSWORD="$POSTGRES_PASSWORD" docker exec -i \
-    -e PGPASSWORD pritika-postgres psql -U postgres -v ON_ERROR_STOP=1 "$@"
+    -e PGPASSWORD pritika-postgres \
+    psql -U postgres -q -v ON_ERROR_STOP=1 \
+    --set "client_min_messages=warning" "$@" \
+    >/dev/null
+}
+
+# Same wrapper but for cases where we want to inspect the result (true/false
+# style checks). Output still suppressed in error case.
+psql_check() {
+  PGPASSWORD="$POSTGRES_PASSWORD" docker exec -i \
+    -e PGPASSWORD pritika-postgres \
+    psql -U postgres -tAc "$1"
 }
 
 log "Ensuring database 'pg_scenarios' exists"
-if psql_admin -tAc "SELECT 1 FROM pg_database WHERE datname='pg_scenarios'" | grep -q 1; then
+if [ "$(psql_check "SELECT 1 FROM pg_database WHERE datname='pg_scenarios'")" = "1" ]; then
   log "  already present"
 else
   psql_admin -c "CREATE DATABASE pg_scenarios"
   log "  created"
 fi
 
-# Single CREATE-or-ALTER statement so password rotation works without a
-# manual DROP. We DO NOT log the passwords themselves.
-log "Ensuring role pg_inspector_admin exists with current Key Vault password"
-psql_admin <<SQL >/dev/null
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_inspector_admin') THEN
-    CREATE ROLE pg_inspector_admin LOGIN PASSWORD '${ADMIN_PWD}';
-  ELSE
-    ALTER ROLE pg_inspector_admin WITH LOGIN PASSWORD '${ADMIN_PWD}';
-  END IF;
-END
-\$\$;
-GRANT CONNECT ON DATABASE pg_scenarios TO pg_inspector_admin;
-GRANT CREATE ON DATABASE pg_scenarios TO pg_inspector_admin;
-SQL
+ensure_role() {
+  local role="$1"
+  local pwd="$2"
 
-log "Ensuring role pg_inspector_ro exists with current Key Vault password"
-psql_admin <<SQL >/dev/null
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_inspector_ro') THEN
-    CREATE ROLE pg_inspector_ro LOGIN PASSWORD '${RO_PWD}';
-  ELSE
-    ALTER ROLE pg_inspector_ro WITH LOGIN PASSWORD '${RO_PWD}';
-  END IF;
-END
-\$\$;
-GRANT CONNECT ON DATABASE pg_scenarios TO pg_inspector_ro;
-SQL
+  if [ "$(psql_check "SELECT 1 FROM pg_roles WHERE rolname='$role'")" = "1" ]; then
+    log "  role '$role' present; rotating password to current Key Vault value"
+    # Use psql variable substitution so the password is quoted by psql, not
+    # interpolated into the heredoc. :'name' wraps in single quotes safely.
+    printf "ALTER ROLE %s WITH LOGIN PASSWORD :'pwd';\nGRANT CONNECT ON DATABASE pg_scenarios TO %s;\n" "$role" "$role" \
+      | PGPASSWORD="$POSTGRES_PASSWORD" docker exec -i \
+          -e PGPASSWORD pritika-postgres \
+          psql -U postgres -q -v ON_ERROR_STOP=1 \
+          --set "client_min_messages=warning" \
+          --set "pwd=$pwd" >/dev/null 2>&1
+  else
+    log "  creating role '$role'"
+    printf "CREATE ROLE %s WITH LOGIN PASSWORD :'pwd';\nGRANT CONNECT ON DATABASE pg_scenarios TO %s;\n" "$role" "$role" \
+      | PGPASSWORD="$POSTGRES_PASSWORD" docker exec -i \
+          -e PGPASSWORD pritika-postgres \
+          psql -U postgres -q -v ON_ERROR_STOP=1 \
+          --set "client_min_messages=warning" \
+          --set "pwd=$pwd" >/dev/null 2>&1
+  fi
+}
 
-# Note: schema-level USAGE + SELECT grants happen inside migration 001
-# (Epic 2.2), which knows the names of the 21 scenario sub-schemas. Doing
-# the grants here would require this script to know that list, coupling
-# ops to schema design. Cleaner to keep schema work in migrations.
+log "Ensuring role 'inspector_admin'"
+ensure_role inspector_admin "$INSPECTOR_ADMIN_PWD"
+psql_admin -d pg_scenarios -c "GRANT CREATE ON DATABASE pg_scenarios TO inspector_admin"
+
+log "Ensuring role 'inspector_ro'"
+ensure_role inspector_ro "$INSPECTOR_RO_PWD"
+
+# Schema-level USAGE + SELECT grants happen inside migration 001 (Epic 2.2),
+# which knows the names of the 21 scenario sub-schemas.
 
 log "Writing $PROJECT_ENV (mode 600)"
 umask 077
 cat > "$PROJECT_ENV" <<EOF
 NODE_ENV=production
 PORT=3014
-DATABASE_URL=postgres://pg_inspector_ro:${RO_PWD}@pritika-postgres:5432/pg_scenarios
-ADMIN_DATABASE_URL=postgres://pg_inspector_admin:${ADMIN_PWD}@pritika-postgres:5432/pg_scenarios
+DATABASE_URL=postgres://inspector_ro:${INSPECTOR_RO_PWD}@pritika-postgres:5432/pg_scenarios
+ADMIN_DATABASE_URL=postgres://inspector_admin:${INSPECTOR_ADMIN_PWD}@pritika-postgres:5432/pg_scenarios
 REDIS_URL=redis://pritika-redis:6379/13
 OPENAI_API_KEY=${OPENAI_KEY}
 LOG_LEVEL=info
