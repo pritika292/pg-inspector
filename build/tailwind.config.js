@@ -7,11 +7,35 @@ const repoRoot = path.resolve(here, "..");
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: "class",
-  // Fast-glob inside Tailwind resolves relative paths from CWD, not from the
-  // config file. Using an absolute path keeps the scan working regardless of
-  // where the build is invoked from. Without this, the live CSS shipped with
-  // no utility classes after we moved configs into build/.
   content: [path.join(repoRoot, "src/client/**/*.{ts,tsx,html}")],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      fontFamily: {
+        // Hand-tuned stack; see index.css for the @font-face declarations.
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      colors: {
+        ink: "var(--ink)",
+        "ink-dim": "var(--ink-dim)",
+        "ink-mute": "var(--ink-mute)",
+        surface: "var(--surface)",
+        "surface-2": "var(--surface-elevated)",
+        seam: "var(--seam)",
+        "accent-social": "var(--accent-social)",
+        "accent-enterprise": "var(--accent-enterprise)",
+        "accent-infra": "var(--accent-infra)",
+        "accent-ecommerce": "var(--accent-ecommerce)",
+        "accent-fintech": "var(--accent-fintech)",
+      },
+      letterSpacing: {
+        widest: "0.18em",
+      },
+      fontSize: {
+        "te-label": ["0.625rem", { lineHeight: "1.2", letterSpacing: "0.18em" }],
+        "te-label-md": ["0.75rem", { lineHeight: "1.2", letterSpacing: "0.16em" }],
+      },
+    },
+  },
   plugins: [],
 };

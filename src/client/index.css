@@ -1,3 +1,146 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Design tokens ───────────────────────────────────────────────────── */
+
+:root {
+  /* Light defaults — overridden by .dark below. */
+  --ink: #0a0a0c;
+  --ink-dim: rgba(10, 10, 12, 0.7);
+  --ink-mute: rgba(10, 10, 12, 0.45);
+  --surface: #fafafb;
+  --surface-elevated: #ffffff;
+  --seam: rgba(10, 10, 12, 0.08);
+
+  /* Per-scenario accent colors. Hand-picked to differentiate without
+     clashing. Each is paired with a 20%-tinted bg for surfaces. */
+  --accent-social: #a78bfa; /* violet-400 */
+  --accent-enterprise: #60a5fa; /* sky-400 */
+  --accent-infra: #fb923c; /* amber-400 */
+  --accent-ecommerce: #34d399; /* emerald-400 */
+  --accent-fintech: #22d3ee; /* cyan-400 */
+
+  color-scheme: light;
+}
+
+.dark {
+  --ink: #ebebef;
+  --ink-dim: rgba(235, 235, 239, 0.7);
+  --ink-mute: rgba(235, 235, 239, 0.4);
+  --surface: #0b0b0f;
+  --surface-elevated: #14141a;
+  --seam: rgba(235, 235, 239, 0.08);
+  color-scheme: dark;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────── */
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  font-feature-settings:
+    "ss01" on,
+    "cv11" on;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+.te-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ─── TE-style components ─────────────────────────────────────────────── */
+
+@layer components {
+  .te-label {
+    @apply font-mono text-te-label uppercase text-ink-mute;
+  }
+  .te-label-md {
+    @apply font-mono text-te-label-md uppercase text-ink-dim;
+  }
+  .te-panel {
+    background: var(--surface-elevated);
+    border: 1px solid var(--seam);
+  }
+  .te-hairline {
+    border-color: var(--seam);
+  }
+  .te-button {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-sm font-mono text-[11px] uppercase tracking-widest transition-colors;
+    color: var(--ink);
+    border: 1px solid var(--seam);
+    background: transparent;
+  }
+  .te-button:hover {
+    background: var(--surface-elevated);
+  }
+  .te-button:disabled {
+    @apply opacity-30 cursor-not-allowed;
+  }
+  .te-button.te-button-primary {
+    color: var(--surface);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .te-button.te-button-primary:hover {
+    opacity: 0.9;
+  }
+  .te-divider {
+    border-color: var(--seam);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ─── react-flow overrides ────────────────────────────────────────────── */
+
+.react-flow__background {
+  background: var(--surface);
+}
+.react-flow__controls {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--seam) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--seam) !important;
+  color: var(--ink-dim) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--surface) !important;
+}
+
+/* Group / subflow node background — used for the per-schema boundary box
+   inside each scenario. The actual box styling is in the React component. */
+.react-flow__node-default {
+  background: transparent;
+  border: none;
+}
+
+/* ─── Subtle motion ───────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .te-fade-in {
+    animation: te-fade-in 240ms ease-out;
+  }
+}
+@keyframes te-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
