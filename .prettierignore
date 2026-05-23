@@ -7,3 +7,7 @@ package-lock.json
 *.md
 *.yaml
 *.yml
+
+# Shell scripts use shellcheck via pre-commit, not prettier
+*.sh
+*.bash
