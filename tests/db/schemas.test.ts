@@ -31,7 +31,8 @@ describe.skipIf(!dbUrl)("scenario schemas + migrations", () => {
     await client.query("DROP TABLE IF EXISTS _migrations");
 
     const result = await migrate(client, MIGRATIONS_DIR);
-    expect(result.applied.length).toBe(7);
+    // 001 schemas + 002-006 scenarios + 007 soft refs + 008 seed marker = 8
+    expect(result.applied.length).toBe(8);
   });
 
   afterAll(async () => {
@@ -118,6 +119,6 @@ describe.skipIf(!dbUrl)("scenario schemas + migrations", () => {
   it("re-running the migrator is a no-op", async () => {
     const result = await migrate(client, MIGRATIONS_DIR);
     expect(result.applied).toEqual([]);
-    expect(result.skipped.length).toBe(7);
+    expect(result.skipped.length).toBe(8);
   });
 });

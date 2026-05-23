@@ -2,9 +2,9 @@ import { createApp } from "./app.js";
 import { config } from "./config.js";
 import { getAdminPool, closeAdminPool } from "./db/adminPool.js";
 import { migrate } from "./db/migrate.js";
+import { runSeed } from "./db/seed/runSeed.js";
 
 async function bootstrap(): Promise<void> {
-  // Migrations run on every container start. The runner is idempotent.
   const adminPool = getAdminPool();
   const client = await adminPool.connect();
   try {
@@ -14,11 +14,15 @@ async function bootstrap(): Promise<void> {
     } else {
       console.log(`[migrate] up to date (${skipped.length} already applied)`);
     }
+    const seed = await runSeed(client);
+    if (seed.ran) {
+      console.log(`[seed] ${seed.reason} in ${seed.durationMs}ms`);
+    } else {
+      console.log(`[seed] skipped (${seed.reason})`);
+    }
   } finally {
     client.release();
   }
-  // Admin pool is unused once migrations have run; the HTTP server only
-  // touches the read-only pool. Closing keeps the connection count low.
   await closeAdminPool();
 
   const app = createApp();
