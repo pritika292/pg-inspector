@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TopBar } from "./components/TopBar.js";
 import { ScenarioList } from "./components/ScenarioList.js";
 import { Visualizer } from "./components/Visualizer.js";
 import { TableDataView } from "./components/TableDataView.js";
 import { Toolbox } from "./components/Toolbox.js";
+import { About } from "./pages/About.js";
 import type { ScenarioListEntry } from "./lib/types.js";
 
 interface OpenTable {
@@ -11,9 +12,29 @@ interface OpenTable {
   tableName: string;
 }
 
+function currentPath(): string {
+  return typeof window === "undefined" ? "/" : window.location.pathname;
+}
+
 export function App(): JSX.Element {
+  const [path, setPath] = useState<string>(currentPath);
   const [scenario, setScenario] = useState<ScenarioListEntry | undefined>(undefined);
   const [openTable, setOpenTable] = useState<OpenTable | undefined>(undefined);
+
+  useEffect(() => {
+    const onPop = (): void => setPath(currentPath());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const go = (p: string): void => {
+    if (typeof window !== "undefined") window.history.pushState({}, "", p);
+    setPath(p);
+  };
+
+  if (path === "/about") {
+    return <About onBack={() => go("/")} />;
+  }
 
   const handleSelectScenario = (entry: ScenarioListEntry): void => {
     setScenario(entry);
@@ -30,11 +51,11 @@ export function App(): JSX.Element {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)] text-ink">
-      <TopBar activeScenarioName={scenario?.name} />
+      <TopBar activeScenarioName={scenario?.name} onAboutClick={() => go("/about")} />
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="w-[260px] shrink-0">
+          <div className="w-[260px] shrink-0 hidden md:block">
             <ScenarioList activeSlug={scenario?.slug} onSelect={handleSelectScenario} />
           </div>
 
@@ -47,7 +68,7 @@ export function App(): JSX.Element {
           </div>
 
           {openTable && scenario && (
-            <div className="w-[420px] shrink-0">
+            <div className="w-[420px] shrink-0 hidden lg:block">
               <TableDataView
                 scenarioSlug={scenario.slug}
                 schemaName={openTable.schemaName}
@@ -56,6 +77,11 @@ export function App(): JSX.Element {
               />
             </div>
           )}
+        </div>
+
+        {/* Mobile-only scenario chip strip — replaces the left pane below md */}
+        <div className="md:hidden">
+          <MobileScenarioStrip activeSlug={scenario?.slug} onSelect={handleSelectScenario} />
         </div>
 
         {scenario ? <Toolbox scenario={scenario} /> : <BottomToolboxPlaceholder />}
@@ -85,7 +111,45 @@ function EmptyVisualizer(): JSX.Element {
 function BottomToolboxPlaceholder(): JSX.Element {
   return (
     <div className="te-panel border-t h-[240px] flex items-center justify-center shrink-0">
-      <p className="te-label">toolbox — wires up in next slice</p>
+      <p className="te-label">toolbox — pick a scenario</p>
+    </div>
+  );
+}
+
+function MobileScenarioStrip({
+  activeSlug,
+  onSelect,
+}: {
+  activeSlug: string | undefined;
+  onSelect: (entry: ScenarioListEntry) => void;
+}): JSX.Element {
+  const [entries, setEntries] = useState<ScenarioListEntry[] | undefined>(undefined);
+
+  useEffect(() => {
+    fetch("/api/scenarios")
+      .then((r) => r.json() as Promise<ScenarioListEntry[]>)
+      .then(setEntries)
+      .catch(() => setEntries([]));
+  }, []);
+
+  return (
+    <div className="te-panel border-t flex gap-1 overflow-x-auto px-2 py-1.5">
+      {entries?.map((s) => {
+        const isActive = activeSlug === s.slug;
+        return (
+          <button
+            key={s.slug}
+            type="button"
+            onClick={() => onSelect(s)}
+            className="te-button shrink-0"
+            style={
+              isActive ? { borderColor: `var(${s.accentVar})`, color: "var(--ink)" } : undefined
+            }
+          >
+            {s.name}
+          </button>
+        );
+      })}
     </div>
   );
 }
