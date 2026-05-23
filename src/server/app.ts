@@ -3,6 +3,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { securityHeaders } from "./middleware/securityHeaders.js";
+import { scenariosRouter } from "./routes/scenarios.js";
 
 // dist/server/app.js → ../client = dist/client (where vite emits the SPA).
 const CLIENT_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../client");
@@ -22,6 +23,8 @@ export function createApp(): Express {
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
+
+  app.use(scenariosRouter);
 
   // Serve the built SPA when it's present. In development we use vite's dev
   // server at :5173 (with /api proxied to :3014), so this branch is a no-op.
