@@ -1,0 +1,29 @@
+# Production compose — joins the shared `pritika` Docker network on the VM and
+# reads runtime env (DATABASE_URL, ADMIN_DATABASE_URL, REDIS_URL, OPENAI_API_KEY,
+# NODE_ENV, PORT) from /opt/pritika/_infra/pg-inspector.env. The file is
+# written by scripts/bootstrap-vm.sh on first deploy from Azure Key Vault and
+# never touched again.
+#
+# For local development use docker-compose.local.yml.
+
+networks:
+  pritika:
+    external: true
+
+services:
+  app:
+    build: .
+    container_name: pg-inspector
+    restart: unless-stopped
+    networks: [pritika]
+    ports:
+      - "3014:3014"
+    env_file:
+      - /opt/pritika/_infra/pg-inspector.env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3014/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    mem_limit: 384m

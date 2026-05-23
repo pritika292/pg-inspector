@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pg-inspector · multi-scenario data sandbox</title>
+    <meta
+      name="description"
+      content="Pick a scenario. Explore its schema. Write SQL or generate it from English. See query plans and get schema-improvement suggestions."
+    />
+    <script>
+      // Default dark; only "light" opts out. Applied before React mounts to
+      // avoid flash.
+      (function () {
+        try {
+          var p = localStorage.getItem("pg-inspector:theme");
+          if (p !== "light") document.documentElement.classList.add("dark");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body
+    class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased"
+  >
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
