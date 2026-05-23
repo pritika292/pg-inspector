@@ -7,7 +7,7 @@ import { createApp } from "../../src/server/app.js";
 import { migrate } from "../../src/server/db/migrate.js";
 import { runSeed } from "../../src/server/db/seed/runSeed.js";
 import { closePool } from "../../src/server/db/pool.js";
-import { closeRedis } from "../../src/server/services/redis.js";
+import { closeRedis, getRedis } from "../../src/server/services/redis.js";
 
 const dbUrl = process.env.ADMIN_DATABASE_URL || process.env.DATABASE_URL || "";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -20,8 +20,13 @@ describe.skipIf(!dbUrl)("/api/query/{run,explain}", () => {
     const client = new pg.Client({ connectionString: dbUrl });
     await client.connect();
     await migrate(client, MIGRATIONS_DIR);
-    await runSeed(client);
+    await runSeed(client, { force: true });
     await client.end();
+    try {
+      await getRedis().flushdb();
+    } catch {
+      /* uncached path */
+    }
     app = createApp();
   }, 90_000);
 
