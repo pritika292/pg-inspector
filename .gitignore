@@ -1,0 +1,43 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local Claude Code notes — auto-loaded by Claude Code but never committed.
+# Anything project-context-related that isn't safe in the public CLAUDE.md goes here.
+CLAUDE.local.md
+
+# Private planning + design notes. Never push these to the public repo.
+PLAN.md
+PLAN_*.md
+plan.md
+plan-*.md
+notes/private/
+docs/private/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# iCloud Drive sometimes duplicates files across devices with a " 2" suffix.
+# Ignore them so they never get committed by accident.
+* 2.*
+* 2
+
+# Logs / temp
+*.log
+tmp/
+.tmp/
