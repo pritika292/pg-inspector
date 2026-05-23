@@ -12,7 +12,13 @@ function applyTheme(theme: "light" | "dark"): void {
   document.documentElement.classList.toggle("dark", theme === "dark");
 }
 
-export function TopBar({ activeScenarioName }: { activeScenarioName?: string }): JSX.Element {
+export function TopBar({
+  activeScenarioName,
+  onAboutClick,
+}: {
+  activeScenarioName?: string;
+  onAboutClick?: () => void;
+}): JSX.Element {
   const [theme, setTheme] = useState<"light" | "dark">(readTheme);
 
   useEffect(() => {
@@ -29,15 +35,22 @@ export function TopBar({ activeScenarioName }: { activeScenarioName?: string }):
           {activeScenarioName ?? "select a scenario"}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        className="te-button"
-        aria-label="toggle theme"
-      >
-        {theme === "dark" ? <Sun size={12} /> : <Moon size={12} />}
-        {theme === "dark" ? "LIGHT" : "DARK"}
-      </button>
+      <div className="flex gap-1.5">
+        {onAboutClick && (
+          <button type="button" onClick={onAboutClick} className="te-button">
+            ABOUT
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="te-button"
+          aria-label="toggle theme"
+        >
+          {theme === "dark" ? <Sun size={12} /> : <Moon size={12} />}
+          {theme === "dark" ? "LIGHT" : "DARK"}
+        </button>
+      </div>
     </header>
   );
 }

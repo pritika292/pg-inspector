@@ -21,6 +21,6 @@ describe("<App />", () => {
     render(<App />);
     expect(screen.getByText("pg-inspector")).toBeInTheDocument();
     expect(screen.getByText("visualizer")).toBeInTheDocument();
-    expect(screen.getByText(/pick a scenario/i)).toBeInTheDocument();
+    expect(screen.getByText(/pick a scenario on the left/i)).toBeInTheDocument();
   });
 });

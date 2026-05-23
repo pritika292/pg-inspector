@@ -25,7 +25,7 @@ async function bootstrap(): Promise<void> {
   }
   await closeAdminPool();
 
-  const app = createApp();
+  const app = createApp({ enableRateLimit: true, enableRequestLog: true });
   app.listen(config.PORT, () => {
     console.log(`pg-inspector listening on :${config.PORT}`);
   });
