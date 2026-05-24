@@ -35,24 +35,56 @@ export function validateSelectOnly(sql: string): ValidatorResult {
   return checkStatement(stmt);
 }
 
+// Tree-walk over a statement. Returns ok iff every branch is a read-only
+// SELECT-shaped form (plain select, set ops over selects, or WITH whose
+// CTE + body are also walked recursively).
 function checkStatement(stmt: Statement): ValidatorResult {
   if (stmt.type === "select") return { ok: true };
 
+  // pgsql-ast-parser flattens set operations into top-level `union` / `union all`
+  // nodes with `left` and `right` recursive children. INTERSECT / EXCEPT
+  // aren't recognized by the parser (returns a parse error), so we don't
+  // need to handle them here.
+  if (stmt.type === "union" || stmt.type === "union all") {
+    const left = checkStatement(stmt.left as Statement);
+    if (!left.ok) return left;
+    const right = checkStatement(stmt.right as Statement);
+    if (!right.ok) return right;
+    return { ok: true };
+  }
+
   if (stmt.type === "with") {
-    // WITH [RECURSIVE] ... SELECT. Every CTE must itself be a SELECT, and
-    // the body after the CTEs must be a SELECT.
+    // Plain WITH: bind is an array of { alias, statement } objects.
     for (const binding of stmt.bind) {
-      const inner = binding.statement;
-      if (inner.type !== "select") {
+      const inner = checkStatement(binding.statement as Statement);
+      if (!inner.ok) {
         return {
           ok: false,
-          reason: `CTE '${binding.alias.name}' must be a SELECT (got ${inner.type})`,
+          reason: `CTE '${binding.alias.name}' must be a SELECT (${inner.reason})`,
         };
       }
     }
-    const body = stmt.in;
-    if (body.type !== "select") {
-      return { ok: false, reason: `WITH body must be a SELECT (got ${body.type})` };
+    const body = checkStatement(stmt.in as Statement);
+    if (!body.ok) {
+      return { ok: false, reason: `WITH body must be a SELECT (${body.reason})` };
+    }
+    return { ok: true };
+  }
+
+  if (stmt.type === "with recursive") {
+    // WITH RECURSIVE: pgsql-ast-parser flattens this differently. `bind` is
+    // the recursive statement (typically a `union all` of base case + step),
+    // and `in` is the body after the CTE.
+    const cte = checkStatement(stmt.bind as Statement);
+    if (!cte.ok) {
+      return {
+        ok: false,
+        reason: `CTE '${stmt.alias?.name ?? "recursive"}' must be a SELECT (${cte.reason})`,
+      };
+    }
+    const body = checkStatement(stmt.in as Statement);
+    if (!body.ok) {
+      return { ok: false, reason: `WITH RECURSIVE body must be a SELECT (${body.reason})` };
     }
     return { ok: true };
   }

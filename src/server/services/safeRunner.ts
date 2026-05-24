@@ -13,6 +13,22 @@ import { getScenario } from "./scenarios.js";
 
 const HARD_LIMIT = 500;
 
+// Normalize the user-typed SQL before wrapping. Strips trailing `;`,
+// trailing whitespace, and trailing `--` line comments so they don't end up
+// inside the parenthesized wrap `SELECT * FROM (...) LIMIT 501`.
+//
+// The `;` matters because Postgres rejects `... ;)` as "syntax error at or
+// near \";\". A `--` line comment with no terminating newline would eat the
+// closing `)`. Mixing both (e.g. `SELECT 1; -- ok`) shows up in real user
+// pastes.
+//
+// String-literal safety: `(?<=\s)--` only matches a `--` preceded by
+// whitespace, so `SELECT '-- foo'` (where `--` is inside a string after `'`)
+// is left alone. Tested explicitly.
+export function normalizeUserSql(sql: string): string {
+  return sql.replace(/(?:[;\s]|(?<=\s)--[^\n]*)+$/u, "");
+}
+
 export interface RunResult {
   columns: string[];
   rows: Record<string, unknown>[];
@@ -36,7 +52,8 @@ export async function runReadOnly(sql: string, scenarioSlug: string): Promise<Ru
   const meta = getScenario(scenarioSlug);
   if (!meta) throw new SafeRunnerError(`unknown scenario: ${scenarioSlug}`, "UNKNOWN_SCENARIO");
 
-  const wrapped = `SELECT * FROM (${sql}) AS pginspector_wrap LIMIT ${HARD_LIMIT + 1}`;
+  // Wrap on new lines so trailing `--` comments can't swallow the `)`.
+  const wrapped = `SELECT * FROM (\n${normalizeUserSql(sql)}\n) AS pginspector_wrap LIMIT ${HARD_LIMIT + 1}`;
   return runWithGuards(wrapped, meta.schemas);
 }
 
@@ -47,7 +64,9 @@ export async function runExplain(sql: string, scenarioSlug: string): Promise<unk
   const meta = getScenario(scenarioSlug);
   if (!meta) throw new SafeRunnerError(`unknown scenario: ${scenarioSlug}`, "UNKNOWN_SCENARIO");
 
-  const explainSql = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql}`;
+  // Newline before user SQL is important here too: a trailing line comment in
+  // the user's SQL would otherwise have nothing to terminate it.
+  const explainSql = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)\n${normalizeUserSql(sql)}`;
   const result = await runWithGuards(explainSql, meta.schemas, {
     timeoutMs: 5000,
     skipLimitWrap: true,

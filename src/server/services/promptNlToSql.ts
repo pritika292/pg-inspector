@@ -53,18 +53,51 @@ export function buildNlToSqlPrompt(
   };
 }
 
+// The model is instructed to emit either "CANNOT_ANSWER <reason>" or a bare
+// SQL statement. In practice gpt-4.1-mini sometimes ignores "no markdown" and
+// wraps in ```sql fences, sometimes adds a preamble like "Here's the SQL:".
+// This parser handles the common deviations defensively.
+//
+//   - CANNOT_ANSWER detection looks at the first non-whitespace line so a
+//     trailing one-liner reason still parses.
+//   - SQL extraction prefers the body of a ```[sql|postgres|postgresql] code
+//     block when present; otherwise falls back to the whole trimmed string
+//     (with any fence markers stripped). The validator gets the last word on
+//     whether what comes out is actually a SELECT.
 export function parseNlToSqlResponse(
   raw: string,
 ): { sql: string } | { error: "CANNOT_ANSWER"; reason: string } {
   const trimmed = raw.trim();
-  if (trimmed.toUpperCase().startsWith("CANNOT_ANSWER")) {
-    const reason = trimmed.replace(/^CANNOT_ANSWER\s*/i, "").trim() || "no reason given";
+  if (!trimmed) {
+    return { error: "CANNOT_ANSWER", reason: "model returned an empty response" };
+  }
+
+  // CANNOT_ANSWER may appear after a brief preamble; check the first line.
+  const firstLine = trimmed.split(/\r?\n/, 1)[0]?.trim() ?? "";
+  if (firstLine.toUpperCase().startsWith("CANNOT_ANSWER")) {
+    const reason = firstLine.replace(/^CANNOT_ANSWER\s*/i, "").trim() || "no reason given";
     return { error: "CANNOT_ANSWER", reason };
   }
-  // Strip stray code fences just in case.
+
+  // Prefer the inside of the first ```sql / ```postgres / ```postgresql /
+  // plain ``` fenced block. The (?:...) groups make this match the closing
+  // fence too.
+  const fenced = trimmed.match(/```(?:sql|postgres(?:ql)?)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return { sql: fenced[1].trim() };
+  }
+
+  // No fence: strip any leading "Here's the SQL:" style preamble of the form
+  // "<text>:\n<sql>" if the second line starts with SELECT / WITH.
+  const preambleMatch = trimmed.match(/^[^\n]*:\s*\n+\s*((?:WITH|SELECT)\b[\s\S]+)$/i);
+  if (preambleMatch?.[1]) {
+    return { sql: preambleMatch[1].trim() };
+  }
+
+  // Last resort: strip stray fence opener/closer markers and return the rest.
   const cleaned = trimmed
-    .replace(/^```(?:sql)?\s*/i, "")
-    .replace(/```$/, "")
+    .replace(/^```(?:sql|postgres(?:ql)?)?\s*/i, "")
+    .replace(/\s*```$/, "")
     .trim();
   return { sql: cleaned };
 }
