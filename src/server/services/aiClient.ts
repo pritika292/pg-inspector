@@ -1,6 +1,7 @@
 import { AzureOpenAI } from "openai";
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 import { config } from "../config.js";
+import { reportAiUsage } from "./aiUsageEmit.js";
 
 // Azure OpenAI client wired through Managed Identity (prod: VM's
 // System-Assigned Identity; local dev: az login user's identity via
@@ -105,6 +106,9 @@ function makeRealClient(): AiClient {
         max_completion_tokens: opts.maxOutputTokens ?? 500,
         temperature: opts.temperature ?? 0.1,
       });
+      // Report tokens to controlroom for the cross-family dashboard tiles.
+      // Fire-and-forget; never blocks the response.
+      reportAiUsage(deployment, res.usage?.prompt_tokens ?? 0, res.usage?.completion_tokens ?? 0);
       return res.choices[0]?.message?.content ?? "";
     },
 
@@ -119,11 +123,20 @@ function makeRealClient(): AiClient {
         max_completion_tokens: opts.maxOutputTokens ?? 1000,
         temperature: opts.temperature ?? 0.2,
         stream: true,
+        // Last chunk carries a `usage` block when this is on.
+        stream_options: { include_usage: true },
       });
+      let prompt = 0;
+      let completion = 0;
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) yield delta;
+        if (chunk.usage) {
+          prompt = chunk.usage.prompt_tokens ?? 0;
+          completion = chunk.usage.completion_tokens ?? 0;
+        }
       }
+      reportAiUsage(deployment, prompt, completion);
     },
 
     budgetRemaining: () => budget.remaining(),
