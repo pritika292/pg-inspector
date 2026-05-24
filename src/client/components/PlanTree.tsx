@@ -82,7 +82,7 @@ function Node({ node, bottleneck, depth }: NodeProps): JSX.Element {
         }
       >
         <div className="flex items-baseline justify-between gap-2 flex-wrap">
-          <span className="te-mono text-[12px] uppercase tracking-wider text-ink">
+          <span className="te-mono text-[13px] uppercase tracking-wider text-ink">
             {node["Node Type"] ?? "?"}
             {node["Join Type"] && <span className="text-ink-mute"> · {node["Join Type"]}</span>}
             {node["Relation Name"] && (
@@ -99,12 +99,12 @@ function Node({ node, bottleneck, depth }: NodeProps): JSX.Element {
             )}
           </span>
           {actual != null && (
-            <span className="te-mono text-[12px] tabular text-ink-mute">
+            <span className="te-mono text-[13px] tabular text-ink-mute">
               {actual.toFixed(2)} ms
             </span>
           )}
         </div>
-        <div className="mt-1 te-mono text-[12px] flex flex-wrap gap-2 text-ink-mute tabular">
+        <div className="mt-1 te-mono text-[13px] flex flex-wrap gap-2 text-ink-mute tabular">
           {actualRows != null && <span>actual {actualRows.toLocaleString()}</span>}
           {planRows != null && (
             <span className={badRows ? "text-[color:var(--accent-fintech)]" : ""}>
@@ -114,12 +114,12 @@ function Node({ node, bottleneck, depth }: NodeProps): JSX.Element {
           )}
         </div>
         {node["Filter"] && (
-          <div className="mt-1 te-mono text-[12px] text-ink-mute truncate" title={node["Filter"]}>
+          <div className="mt-1 te-mono text-[13px] text-ink-mute truncate" title={node["Filter"]}>
             filter: {node["Filter"]}
           </div>
         )}
         {(node["Index Cond"] || node["Hash Cond"]) && (
-          <div className="mt-1 te-mono text-[12px] text-ink-mute truncate">
+          <div className="mt-1 te-mono text-[13px] text-ink-mute truncate">
             cond: {node["Index Cond"] ?? node["Hash Cond"]}
           </div>
         )}

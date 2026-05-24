@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ArrowRight, Play, Sparkles, X } from "lucide-react";
 import { TableView } from "./TableView.js";
@@ -425,7 +426,7 @@ function ModeStrip({
             type="button"
             onClick={() => onChange(i.id)}
             className={clsx(
-              "te-mono text-[10px] uppercase tracking-widest transition-colors h-7 flex items-center px-1",
+              "te-mono text-[12px] uppercase tracking-widest transition-colors h-7 flex items-center px-1",
               active ? "text-ink border-b-2" : "text-ink-mute hover:text-ink-dim",
             )}
             style={active ? { borderColor: `var(${accent})` } : undefined}
@@ -463,7 +464,7 @@ function OutTabs({
             type="button"
             onClick={() => onChange(i.id)}
             className={clsx(
-              "te-mono text-[10px] uppercase tracking-widest transition-colors h-7 flex items-center px-1",
+              "te-mono text-[12px] uppercase tracking-widest transition-colors h-7 flex items-center px-1",
               active ? "text-ink border-b-2" : "text-ink-mute hover:text-ink-dim",
             )}
             style={active ? { borderColor: `var(${accent})` } : undefined}
@@ -493,7 +494,7 @@ function WriteSql(p: {
           onChange={(e) => p.onChange(e.target.value)}
           spellCheck={false}
           placeholder="SELECT ... FROM ..."
-          className="absolute inset-0 w-full h-full p-3 te-mono text-[12px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
+          className="absolute inset-0 w-full h-full p-3 te-mono text-[14px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
           style={{ tabSize: 2 }}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && p.canRun) p.onRun();
@@ -539,7 +540,7 @@ function WriteAsk(p: {
           onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
           spellCheck
           placeholder='Ask in plain English. e.g. "Top 10 posts by score this month"'
-          className="absolute inset-0 w-full h-full p-3 text-[14px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
+          className="absolute inset-0 w-full h-full p-3 text-[15px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && p.canRun) p.onRun();
           }}
@@ -571,7 +572,7 @@ function WriteAsk(p: {
         />
         {p.errorKind === "cannot_answer" && (
           <div
-            className="mx-3 mb-2 px-3 py-2 rounded-md text-[13px] leading-relaxed text-ink-dim"
+            className="mx-3 mb-2 px-3 py-2 rounded-md text-[14px] leading-relaxed text-ink-dim"
             style={{
               background: "color-mix(in oklab, var(--ink-mute) 12%, transparent)",
               border: "1px solid var(--seam)",
@@ -642,38 +643,78 @@ function ChipStrip({
   onPick: (v: string) => void;
   accent: string;
 }): JSX.Element {
+  // Portal-mounted tooltip so it escapes the overflow-x:auto on the chip
+  // strip (which forces overflow-y to non-visible too and clipped the
+  // previous CSS-only popover). State holds the active chip index and
+  // the anchor rect taken from the chip's bounding box.
+  const [hover, setHover] = useState<{ idx: number; rect: DOMRect } | null>(null);
+
+  function show(idx: number, el: HTMLElement): void {
+    setHover({ idx, rect: el.getBoundingClientRect() });
+  }
+  function hideIf(idx: number): void {
+    setHover((curr) => (curr?.idx === idx ? null : curr));
+  }
+
   return (
     <div className="px-3 py-1.5 flex items-center gap-1.5 border-b te-hairline overflow-x-auto">
       <span className="te-label shrink-0 mr-1">{label}</span>
-      {items.map((i) => {
-        // Show the tooltip if either the chip text gets truncated (full
-        // text differs from the visible text) or there's a meaningful
-        // help string to surface. Skip empty tooltips so we don't paint
-        // a floating box on hover with nothing in it.
+      {items.map((i, idx) => {
         const fullText = i.fullText ?? i.text;
         const isTruncated = fullText !== i.text;
-        const showTip = isTruncated || (i.help && i.help.trim().length > 0);
+        const hasHelp = !!(i.help && i.help.trim().length > 0);
+        const showTip = isTruncated || hasHelp;
         return (
-          <div key={i.text} className="te-tooltip-host shrink-0">
-            <button
-              type="button"
-              onClick={() => onPick(i.value)}
-              className="te-button max-w-[280px] truncate"
-              style={{ borderColor: `var(${accent})`, color: "var(--ink-dim)" }}
-            >
-              {i.text}
-            </button>
-            {showTip && (
-              <span className="te-tooltip">
-                <span className="block text-ink">{fullText}</span>
-                {i.help && i.help.trim().length > 0 && (
-                  <span className="block mt-1 text-ink-dim font-normal">{i.help}</span>
-                )}
-              </span>
-            )}
-          </div>
+          <button
+            key={i.text}
+            type="button"
+            onClick={() => onPick(i.value)}
+            onMouseEnter={(e) => show(idx, e.currentTarget)}
+            onMouseLeave={() => hideIf(idx)}
+            onFocus={(e) => show(idx, e.currentTarget)}
+            onBlur={() => hideIf(idx)}
+            // !justify-start overrides te-button's justify-center so the
+            // truncated text reads left-to-right with the ellipsis at the
+            // end (not centered with both ends clipped, the bug the user
+            // was seeing).
+            className="te-button shrink-0 max-w-[280px] !justify-start min-w-0"
+            style={{ borderColor: `var(${accent})`, color: "var(--ink-dim)" }}
+          >
+            <span className="block w-full text-left truncate">{i.text}</span>
+          </button>
         );
       })}
+      {hover &&
+        items[hover.idx] &&
+        (items[hover.idx]!.fullText !== items[hover.idx]!.text ||
+          !!items[hover.idx]!.help?.trim().length) &&
+        typeof document !== "undefined" &&
+        createPortal(<ChipTooltip rect={hover.rect} item={items[hover.idx]!} />, document.body)}
+    </div>
+  );
+}
+
+function ChipTooltip({ rect, item }: { rect: DOMRect; item: ChipItem }): JSX.Element {
+  // Position: top-edge sits 8px above the chip; left aligns with chip's
+  // left edge but clamps so the tooltip never spills off the viewport.
+  const fullText = item.fullText ?? item.text;
+  const TOOLTIP_W = 360;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - TOOLTIP_W - 8));
+  const bottom = window.innerHeight - rect.top + 6;
+  return (
+    <div
+      role="tooltip"
+      className="fixed z-[1000] te-panel shadow-lg pointer-events-none p-2.5"
+      style={{ left, bottom, maxWidth: TOOLTIP_W }}
+    >
+      <div className="te-mono text-[13px] leading-relaxed text-ink whitespace-normal break-words">
+        {fullText}
+      </div>
+      {item.help && item.help.trim().length > 0 && (
+        <div className="mt-1 text-[12px] leading-relaxed text-ink-dim whitespace-normal break-words">
+          {item.help}
+        </div>
+      )}
     </div>
   );
 }
@@ -694,7 +735,7 @@ function PlanView(p: {
     <div className="h-full overflow-auto">
       <div className="px-3 py-2 te-label flex items-center justify-between border-b te-hairline">
         <span>execution plan</span>
-        <span className="text-ink-mute normal-case tracking-normal text-[11px]">
+        <span className="text-ink-mute normal-case tracking-normal text-[13px]">
           postgres EXPLAIN ANALYZE
         </span>
       </div>
@@ -824,11 +865,11 @@ function FailedSqlPanel(p: {
             <Sparkles size={11} /> ai suggestion
           </div>
           {p.repair.error === "CANNOT_ANSWER" ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+            <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">
               The AI couldn&apos;t turn this into a working SELECT against the scenario&apos;s
               schema. Try rephrasing or pick an example chip on the left.
               {p.repair.why && (
-                <span className="block mt-1 text-[12px] text-ink-mute">
+                <span className="block mt-1 text-[13px] text-ink-mute">
                   model said: {p.repair.why}
                 </span>
               )}
@@ -836,10 +877,10 @@ function FailedSqlPanel(p: {
           ) : (
             <>
               {p.repair.why && (
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{p.repair.why}</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">{p.repair.why}</p>
               )}
               {p.repair.sql && (
-                <pre className="mt-2 te-panel p-2 te-mono text-[12px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+                <pre className="mt-2 te-panel p-2 te-mono text-[13px] leading-relaxed text-ink whitespace-pre-wrap break-words">
                   {p.repair.sql}
                 </pre>
               )}
@@ -868,23 +909,23 @@ function FailedSqlPanel(p: {
 function OutputIntro(): JSX.Element {
   return (
     <div className="h-full overflow-auto p-5">
-      <p className="text-[13px] leading-relaxed text-ink-dim max-w-prose">
+      <p className="text-[14px] leading-relaxed text-ink-dim max-w-prose">
         Pick a mode on the left (SQL or ASK), click an example chip, then RUN. Results land here.
       </p>
       <ul className="mt-4 space-y-2.5 max-w-prose">
         <li className="flex items-start gap-3">
-          <span className="te-mono text-[10px] uppercase tracking-widest text-ink shrink-0 mt-0.5 w-16">
+          <span className="te-mono text-[12px] uppercase tracking-widest text-ink shrink-0 mt-0.5 w-16">
             RESULTS
           </span>
-          <span className="text-[13px] leading-relaxed text-ink-dim">
+          <span className="text-[14px] leading-relaxed text-ink-dim">
             Rows returned by the SELECT.
           </span>
         </li>
         <li className="flex items-start gap-3">
-          <span className="te-mono text-[10px] uppercase tracking-widest text-ink shrink-0 mt-0.5 w-16">
+          <span className="te-mono text-[12px] uppercase tracking-widest text-ink shrink-0 mt-0.5 w-16">
             PLAN
           </span>
-          <span className="text-[13px] leading-relaxed text-ink-dim">
+          <span className="text-[14px] leading-relaxed text-ink-dim">
             Postgres&apos; execution-plan tree. After RUN, a pulsing{" "}
             <span className="te-mono">READING &amp; FIX</span> button appears (top right) — click it
             to open a panel with the AI&apos;s plain-English reading and a concrete index / DDL
@@ -901,7 +942,7 @@ function OutputIntro(): JSX.Element {
 
 function EmptyPanel({ msg }: { msg: string }): JSX.Element {
   return (
-    <div className="p-4 te-label text-ink-mute leading-relaxed normal-case tracking-normal text-[12px]">
+    <div className="p-4 te-label text-ink-mute leading-relaxed normal-case tracking-normal text-[14px]">
       {msg}
     </div>
   );
@@ -910,7 +951,7 @@ function EmptyPanel({ msg }: { msg: string }): JSX.Element {
 function ErrorPanel({ msg }: { msg: string }): JSX.Element {
   return (
     <div
-      className="p-4 te-label leading-relaxed normal-case tracking-normal text-[12px]"
+      className="p-4 te-label leading-relaxed normal-case tracking-normal text-[14px]"
       style={{ color: "var(--accent-fintech)" }}
     >
       {msg}
