@@ -103,12 +103,15 @@ export const SCENARIOS: readonly ScenarioMeta[] = Object.freeze([
     accentVar: "--accent-infra",
     seedQuestions: [
       {
-        label: "p99 latency by service in the last hour",
+        // Seeded metrics span the last 24h so a 1-hour window is empty
+        // outside the freshest seeds. Use 24h so the chip always returns
+        // rows on a public demo (#111).
+        label: "p99 latency by service in the last 24 hours",
         sql:
           "SELECT s.slug, AVG(m.latency_p99_ms) AS avg_p99 " +
           "FROM infra_inventory.services s " +
           "JOIN infra_metrics.metrics_minutely m ON m.service_id = s.id " +
-          "WHERE m.ts > NOW() - INTERVAL '1 hour' " +
+          "WHERE m.ts > NOW() - INTERVAL '24 hours' " +
           "GROUP BY s.slug ORDER BY avg_p99 DESC LIMIT 10;",
         why: "Uses the BRIN index on metrics_minutely(ts).",
       },

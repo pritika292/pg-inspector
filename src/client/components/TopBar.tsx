@@ -32,7 +32,7 @@ export function TopBar({
   }, [theme]);
 
   return (
-    <header className="te-panel border-b flex items-center justify-between px-4 py-2.5">
+    <header className="te-panel !rounded-none border-b flex items-center justify-between px-4 py-2.5">
       <div className="flex items-center gap-3 min-w-0">
         {onHomeClick ? (
           <button
@@ -47,7 +47,7 @@ export function TopBar({
           <span className="te-label text-ink">pg-inspector</span>
         )}
         <span className="text-ink-mute">/</span>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-dim truncate">
+        <span className="font-mono text-[13px] uppercase tracking-widest text-ink-dim truncate">
           {activeScenarioName ?? "select a scenario"}
         </span>
       </div>

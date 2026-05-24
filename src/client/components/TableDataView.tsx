@@ -44,11 +44,11 @@ export function TableDataView({
   const last = Math.min(offset + showing, total);
 
   return (
-    <aside className="te-panel border-l flex flex-col h-full te-fade-in min-w-0">
+    <aside className="te-panel !rounded-none border-l flex flex-col h-full te-fade-in min-w-0">
       <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
         <div className="min-w-0">
           <div className="te-label">table</div>
-          <div className="te-mono text-[12px] uppercase tracking-widest text-ink truncate">
+          <div className="te-mono text-[14px] uppercase tracking-widest text-ink truncate">
             {schemaName}.{tableName}
           </div>
         </div>
@@ -93,7 +93,7 @@ export function TableDataView({
           <div className="p-3 te-label">no rows in this range</div>
         )}
         {page && page.rows.length > 0 && (
-          <table className="w-full text-[11px] te-mono">
+          <table className="w-full text-[12.5px] te-mono">
             <thead className="sticky top-0 bg-[var(--surface-elevated)] z-10 border-b te-hairline">
               <tr>
                 {page.columns.map((c) => (
