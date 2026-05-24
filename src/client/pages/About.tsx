@@ -39,7 +39,17 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             </h1>
           </header>
 
-          <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Full-width architecture diagram. Used to live inside the
+              middle column and was too small to read. Now spans the page
+              so labels and edges are legible at typical viewport widths. */}
+          <section className="mt-10 te-panel p-6 lg:p-8">
+            <p className="te-label">architecture</p>
+            <div className="mt-4">
+              <ArchDiagram />
+            </div>
+          </section>
+
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Left: story */}
             <section className="space-y-6">
               <p className="te-label">story</p>
@@ -105,12 +115,9 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
               </section>
             </section>
 
-            {/* Middle: diagram + tech */}
+            {/* Middle: tech list (diagram moved to its own full-width section above). */}
             <section className="space-y-6">
               <p className="te-label">tech</p>
-              <div className="te-panel p-5">
-                <ArchDiagram />
-              </div>
               <dl className="space-y-3">
                 {TECH.map((t) => (
                   <div key={t.name}>
