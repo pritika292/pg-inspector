@@ -99,7 +99,7 @@ export function TableDataView({
           <div className="p-3 te-label">no rows in this range</div>
         )}
         {page && page.rows.length > 0 && (
-          <table className="w-full text-[12.5px] te-mono">
+          <table className="w-full text-[14px] te-mono">
             <thead className="sticky top-0 bg-[var(--surface-elevated)] z-10 border-b te-hairline">
               <tr>
                 {page.columns.map((c) => (

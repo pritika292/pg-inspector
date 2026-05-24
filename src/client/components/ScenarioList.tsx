@@ -66,17 +66,17 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[13px] font-semibold uppercase tracking-widest text-ink">
+                  <span className="font-mono text-[15px] font-semibold uppercase tracking-widest text-ink">
                     {s.name}
                   </span>
                   <span
                     aria-hidden
-                    className="inline-block w-2.5 h-2.5 rounded-full"
+                    className="inline-block w-3 h-3 rounded-full"
                     style={{ background: `var(${s.accentVar})` }}
                   />
                 </div>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{s.tagline}</p>
-                <div className="mt-2.5 flex gap-3 text-[11px] te-mono font-semibold uppercase tracking-widest text-ink-mute tabular">
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">{s.tagline}</p>
+                <div className="mt-3 flex gap-3 text-[12px] te-mono font-semibold uppercase tracking-widest text-ink-mute tabular">
                   <span>{s.tableCount} tables</span>
                   <span>{s.rowCount.toLocaleString()} rows</span>
                 </div>

@@ -31,7 +31,7 @@ export function TableView({ result }: Props): JSX.Element {
         <div className="p-3 te-label">no rows returned</div>
       ) : (
         <div className="flex-1 overflow-auto min-h-0">
-          <table className="w-full text-[13px] te-mono">
+          <table className="w-full text-[14px] te-mono">
             <thead className="sticky top-0 bg-[var(--surface-elevated)] z-10 border-b te-hairline">
               <tr>
                 {result.columns.map((c) => (
