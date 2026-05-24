@@ -8,22 +8,22 @@
       name="description"
       content="Pick a scenario. Explore its schema. Write SQL or generate it from English. See query plans and get schema-improvement suggestions."
     />
+    <meta name="color-scheme" content="dark light" />
     <script>
-      // Default dark; only "light" opts out. Applied before React mounts to
-      // avoid flash.
+      // Dark is the default at the :root level in index.css. The .light class
+      // is the opt-in. If a user has explicitly toggled to light, restore it
+      // before React mounts so there's no flash.
       (function () {
         try {
           var p = localStorage.getItem("pg-inspector:theme");
-          if (p !== "light") document.documentElement.classList.add("dark");
+          if (p === "light") document.documentElement.classList.add("light");
         } catch (e) {
-          document.documentElement.classList.add("dark");
+          /* localStorage unavailable: stick with the dark default */
         }
       })();
     </script>
   </head>
-  <body
-    class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased"
-  >
+  <body class="min-h-screen antialiased">
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>

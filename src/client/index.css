@@ -2,42 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design tokens ───────────────────────────────────────────────────── */
+/* ─── Design tokens ─────────────────────────────────────────────────────
+   Dark is the DEFAULT. .light is the opt-in. This way, if the inline
+   theme-init script in index.html ever fails to run, the user still gets
+   the intended dark look: no white flash, no light-mode fallback.
+*/
 
 :root {
-  /* Light defaults — overridden by .dark below. */
-  --ink: #0a0a0c;
-  --ink-dim: rgba(10, 10, 12, 0.7);
-  --ink-mute: rgba(10, 10, 12, 0.45);
-  --surface: #fafafb;
-  --surface-elevated: #ffffff;
-  --seam: rgba(10, 10, 12, 0.08);
-
-  /* Per-scenario accent colors. Hand-picked to differentiate without
-     clashing. Each is paired with a 20%-tinted bg for surfaces. */
-  --accent-social: #a78bfa; /* violet-400 */
-  --accent-enterprise: #60a5fa; /* sky-400 */
-  --accent-infra: #fb923c; /* amber-400 */
-  --accent-ecommerce: #34d399; /* emerald-400 */
-  --accent-fintech: #22d3ee; /* cyan-400 */
-
-  color-scheme: light;
-}
-
-.dark {
   --ink: #ebebef;
-  --ink-dim: rgba(235, 235, 239, 0.7);
-  --ink-mute: rgba(235, 235, 239, 0.4);
+  --ink-dim: rgba(235, 235, 239, 0.78);
+  --ink-mute: rgba(235, 235, 239, 0.5);
   --surface: #0b0b0f;
   --surface-elevated: #14141a;
-  --seam: rgba(235, 235, 239, 0.08);
+  --seam: rgba(235, 235, 239, 0.1);
+
+  /* Per-scenario accent colors. Hand-picked to differentiate without
+     clashing. */
+  --accent-social: #b69bff; /* violet */
+  --accent-enterprise: #74b1ff; /* sky */
+  --accent-infra: #ffa14a; /* amber */
+  --accent-ecommerce: #4ddfa3; /* emerald */
+  --accent-fintech: #3ee0f0; /* cyan */
+
   color-scheme: dark;
 }
 
-/* ─── Base ────────────────────────────────────────────────────────────── */
+.light {
+  --ink: #0a0a0c;
+  --ink-dim: rgba(10, 10, 12, 0.75);
+  --ink-mute: rgba(10, 10, 12, 0.5);
+  --surface: #fafafb;
+  --surface-elevated: #ffffff;
+  --seam: rgba(10, 10, 12, 0.1);
+  color-scheme: light;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────── */
 
 html {
   font-size: 16px;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 body {
@@ -49,6 +54,11 @@ body {
     "cv11" on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Slightly heavier than browser default 400. Inter ships a 'cv11'
+     stylistic alternate that pairs nicely with this weight. */
+  font-weight: 450;
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 code,
@@ -56,14 +66,29 @@ code,
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Body paragraph text inside content surfaces (landing, about, drawers).
+   Bumps presence without affecting dense data tables / labels. */
+p {
+  font-weight: 450;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+}
+
 /* ─── TE-style components ─────────────────────────────────────────────── */
 
 @layer components {
   .te-label {
     @apply font-mono text-te-label uppercase text-ink-mute;
+    font-weight: 600;
   }
   .te-label-md {
     @apply font-mono text-te-label-md uppercase text-ink-dim;
+    font-weight: 600;
   }
   .te-panel {
     background: var(--surface-elevated);
@@ -77,6 +102,7 @@ code,
     color: var(--ink);
     border: 1px solid var(--seam);
     background: transparent;
+    font-weight: 600;
   }
   .te-button:hover {
     background: var(--surface-elevated);
@@ -120,8 +146,7 @@ code,
   background: var(--surface) !important;
 }
 
-/* Group / subflow node background — used for the per-schema boundary box
-   inside each scenario. The actual box styling is in the React component. */
+/* Group / subflow node background. */
 .react-flow__node-default {
   background: transparent;
   border: none;

@@ -68,7 +68,7 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
           <p className="mt-5 max-w-2xl mx-auto text-[15px] leading-relaxed text-ink-dim">
             Visualize multi-schema layouts, write SQL safely against ~75K seeded rows, generate
             queries from English, read EXPLAIN plans, get schema-improvement suggestions. AI runs on
-            Azure OpenAI via Managed Identity — no API keys anywhere.
+            Azure OpenAI via Managed Identity. No API keys anywhere.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
             <button
@@ -169,7 +169,7 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
                 <div className="te-label text-ink">honest modeling</div>
                 <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
                   Intra-scenario FKs are real Postgres foreign keys. Cross-scenario references are
-                  soft (informational comments, not enforced) — the visualizer shows that honestly
+                  soft (informational comments, not enforced); the visualizer shows that honestly
                   with dashed edges.
                 </p>
               </div>

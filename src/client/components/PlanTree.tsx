@@ -21,7 +21,7 @@ interface PlanNode {
   Plans?: PlanNode[];
 }
 
-// Returns the node with the max Actual Total Time across the tree — that's
+// Returns the node with the max Actual Total Time across the tree; that's
 // the bottleneck the visualizer highlights.
 function findBottleneckRef(n: PlanNode): PlanNode {
   let worst = n;

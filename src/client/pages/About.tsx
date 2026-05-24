@@ -39,7 +39,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             <h2 className="te-label-md">the soft-reference idea</h2>
             <p className="text-[14px] leading-relaxed text-ink-dim">
               Inside each scenario, schemas reference each other with real Postgres foreign keys
-              (rendered as solid edges in the visualizer). Across scenarios, references are "soft" —
+              (rendered as solid edges in the visualizer). Across scenarios, references are "soft":
               informational columns with a{" "}
               <code className="te-mono text-ink">COMMENT ON COLUMN</code> declaring the target, no
               enforced FK. Real companies have data that crosses team boundaries without unified
@@ -52,7 +52,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             <h2 className="te-label-md">the AI side</h2>
             <p className="text-[14px] leading-relaxed text-ink-dim">
               <code className="te-mono text-ink">gpt-4.1-mini</code> on Azure OpenAI Service.
-              Authentication is via Managed Identity — the VM's System-Assigned identity has
+              Authentication is via Managed Identity. The VM's System-Assigned identity has
               "Cognitive Services User" on the AI resource, so the runtime never holds an API key.
               Local development uses the same path via{" "}
               <code className="te-mono text-ink">DefaultAzureCredential</code>'s{" "}
@@ -65,7 +65,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             <h2 className="te-label-md">honest limits</h2>
             <ul className="text-[14px] leading-relaxed text-ink-dim list-disc pl-5 space-y-2">
               <li>
-                The data is seeded with <code className="te-mono text-ink">@faker-js/faker</code>—
+                The data is seeded with <code className="te-mono text-ink">@faker-js/faker</code>:
                 believable enough at a glance, but it's not real production data and the
                 distributions are only approximately realistic.
               </li>

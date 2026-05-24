@@ -67,7 +67,7 @@ export function TableView({ result }: Props): JSX.Element {
 }
 
 function formatCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "·";
   if (typeof v === "string") return v;
   if (typeof v === "number" || typeof v === "bigint") return v.toString();
   if (v instanceof Date) return v.toISOString();

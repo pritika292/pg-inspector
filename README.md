@@ -1,6 +1,6 @@
 # pg-inspector
 
-> Five-scenario Postgres sandbox. Visualize multi-schema layouts, write SQL safely, generate it from English, read EXPLAIN plans, get schema-improvement suggestions. AI runs on Azure OpenAI via Managed Identity — no API keys anywhere.
+> Five-scenario Postgres sandbox. Visualize multi-schema layouts, write SQL safely, generate it from English, read EXPLAIN plans, get schema-improvement suggestions. AI runs on Azure OpenAI via Managed Identity. no API keys anywhere.
 
 [![ci](https://github.com/pritika292/pg-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/pritika292/pg-inspector/actions/workflows/ci.yml)
 [![deploy](https://github.com/pritika292/pg-inspector/actions/workflows/deploy.yml/badge.svg)](https://github.com/pritika292/pg-inspector/actions/workflows/deploy.yml)
@@ -30,11 +30,11 @@
 
 A web sandbox for exploring Postgres with AI help. Five named-industry scenarios are seeded into one database, each modeled as a small constellation of schemas the way a real company's services own their own data:
 
-- **social_media** (Reddit-shaped) — recursive comments, vote skew, hot-content reads
-- **enterprise_saas** (Salesforce-shaped) — account hierarchy, audit trails, opportunity pipeline
-- **infra_startup** (Datadog-shaped) — time-series metrics with BRIN, alert dedup, incident lifecycle
-- **ecommerce** (Shopify-shaped) — orders + items + payments, partial index on transient states
-- **fintech** (Stripe-shaped) — double-entry ledger, idempotency keys, webhook log
+- **social_media** (Reddit-shaped). recursive comments, vote skew, hot-content reads
+- **enterprise_saas** (Salesforce-shaped). account hierarchy, audit trails, opportunity pipeline
+- **infra_startup** (Datadog-shaped). time-series metrics with BRIN, alert dedup, incident lifecycle
+- **ecommerce** (Shopify-shaped). orders + items + payments, partial index on transient states
+- **fintech** (Stripe-shaped). double-entry ledger, idempotency keys, webhook log
 
 Three things the page lets you do, all read-only:
 
@@ -56,7 +56,7 @@ Most "NL → SQL" demos handwave the safety story and pretend the model is the w
 
 - **AI authentication uses Managed Identity, not API keys.** The VM's System-Assigned Managed Identity has `Cognitive Services User` on the `pritika-ai` Azure OpenAI resource. The runtime constructs an `AzureOpenAI` client with `getBearerTokenProvider(new DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")`. Local dev uses the same `DefaultAzureCredential` cascade, falling through to `az login`. Zero secret bytes ever exist in the repo, in CI, or in any env file.
 
-- **Postgres schemas as services.** Each scenario is split into 3–5 sub-schemas (`sm_identity`, `sm_communities`, `sm_content`, …) that own pieces of the domain, the way services-of-record typically do at companies that have outgrown a single schema. Cross-schema FKs *within* a scenario are real foreign keys (the visualizer draws them solid). Cross-*scenario* references are soft — informational columns whose target is declared in `pg_description` and discovered at introspection time. The dashed edges in the visualizer aren't decoration; they're modeling honesty about cross-team data.
+- **Postgres schemas as services.** Each scenario is split into 3–5 sub-schemas (`sm_identity`, `sm_communities`, `sm_content`, …) that own pieces of the domain, the way services-of-record typically do at companies that have outgrown a single schema. Cross-schema FKs *within* a scenario are real foreign keys (the visualizer draws them solid). Cross-*scenario* references are soft. informational columns whose target is declared in `pg_description` and discovered at introspection time. The dashed edges in the visualizer aren't decoration; they're modeling honesty about cross-team data.
 
 - **EXPLAIN plan reading as a first-class deliverable.** The PlanTree component walks the JSON output, finds the slowest node, highlights it, and flags any node whose actual row count is >10× off from the planner's estimate. The AI commentary streams a senior-engineer rewrite of "the bottleneck is X, here's why, here's what to do."
 
@@ -100,7 +100,7 @@ Two Postgres pools, one process. `getAdminPool()` is used only by the boot-time 
 
 ---
 
-## SQL safety — three layers in detail
+## SQL safety. three layers in detail
 
 ```
                   POST /api/query/run { scenarioSlug, sql }
@@ -169,7 +169,7 @@ Cross-scenario soft references, declared via `COMMENT ON COLUMN`:
 
 The visualizer reads `pg_description` at introspection time and renders these as dashed edges between the scenario boundary boxes.
 
-Seeding uses `@faker-js/faker` with a fixed seed (`FAKER_SEED = 4242`) so two boots produce identical data; bulk-inserted via `pg-format`'s `%L` so each table is one round-trip. Distributions are domain-shaped — opportunities skew to early stages, posts skew to top 50 communities, ~5% of products are soft-deleted, ~10% of disputes are open.
+Seeding uses `@faker-js/faker` with a fixed seed (`FAKER_SEED = 4242`) so two boots produce identical data; bulk-inserted via `pg-format`'s `%L` so each table is one round-trip. Distributions are domain-shaped. opportunities skew to early stages, posts skew to top 50 communities, ~5% of products are soft-deleted, ~10% of disputes are open.
 
 ---
 
@@ -205,7 +205,7 @@ npm test            # one shot
 npm run test:watch  # iterate
 ```
 
-Vitest workspace with two pools: server (Node env, single-fork so integration tests don't race on shared DB state) and client (jsdom). Integration tests use real Postgres + real Redis — no mocking, per the standing rule that mocks of stateful systems hide more bugs than they catch. The AI client is the one exception: tests inject a fake via `setAiClientForTests()` so no real Azure traffic happens in CI.
+Vitest workspace with two pools: server (Node env, single-fork so integration tests don't race on shared DB state) and client (jsdom). Integration tests use real Postgres + real Redis. no mocking, per the standing rule that mocks of stateful systems hide more bugs than they catch. The AI client is the one exception: tests inject a fake via `setAiClientForTests()` so no real Azure traffic happens in CI.
 
 72 tests cover the validator, the safeRunner, every API route, the seeders' row-count and shape invariants, the migration runner, helmet headers, and the React shell.
 
@@ -232,7 +232,7 @@ Manual fallback: `bash scripts/deploy.sh` from any machine where you're `az logi
 - The data is `@faker-js/faker` plus curated word lists. Believable at a glance, not real prod distribution.
 - The AST validator is best-effort. The runtime role is the load-bearing defense; if Postgres ever lets a SELECT escape grant checks (which it doesn't, but pretending), the data the attacker sees is the same data already public on the page.
 - Schema introspection assumes a small graph (<50 tables per scenario). It doesn't paginate. A 10K-table schema would slow `/api/scenarios/:slug`.
-- The 1-second statement timeout is conservative on purpose — it kills any reasonable user query within the latency a recruiter will tolerate, but plans involving the 14K-row `metrics_minutely` table can need 5s. EXPLAIN uses a 5s timeout for that reason; `RUN` doesn't.
+- The 1-second statement timeout is conservative on purpose. it kills any reasonable user query within the latency a recruiter will tolerate, but plans involving the 14K-row `metrics_minutely` table can need 5s. EXPLAIN uses a 5s timeout for that reason; `RUN` doesn't.
 - The advise endpoint makes three sequential model calls (nl→sql, explain, advise). At ~300ms each plus the EXPLAIN itself, advise responses take 1.5–3 seconds. Streaming the final advise back would help; not in v1.
 - Mobile layout collapses the scenario list into a tab strip and hides the table-data drawer; the visualizer still requires a real touchscreen scroll to use comfortably.
 
@@ -242,7 +242,7 @@ Manual fallback: `bash scripts/deploy.sh` from any machine where you're `az logi
 
 - A "schema diff" feature: paste two `pg_dump --schema-only` outputs, get a visualized diff with FK/index/column changes called out.
 - Per-scenario presets for index-tuning labs: deliberately remove an index, let the user observe the EXPLAIN regression, prompt to restore.
-- Live execution preview for advise's suggested DDL — run the index creation against a throwaway schema and re-EXPLAIN, then offer to keep or discard.
+- Live execution preview for advise's suggested DDL. run the index creation against a throwaway schema and re-EXPLAIN, then offer to keep or discard.
 - pgvector-backed semantic search over table + column names so the visualizer's "find" handles fuzzy queries.
 
 ---

@@ -23,7 +23,7 @@ export function App(): JSX.Element {
   const [path, setPath] = useState<string>(currentPath);
   const [scenario, setScenario] = useState<ScenarioListEntry | undefined>(undefined);
   const [openTable, setOpenTable] = useState<OpenTable | undefined>(undefined);
-  // Onboarding hint visibility — gated by localStorage so it only shows on
+  // Onboarding hint visibility, gated by localStorage so it only shows on
   // a user's first visit per browser.
   const [hintVisible, setHintVisible] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -57,7 +57,7 @@ export function App(): JSX.Element {
     return <Landing onTryIt={() => go("/app")} onAbout={() => go("/about")} />;
   }
 
-  // /app — the working surface
+  // /app: the working surface
   const handleSelectScenario = (entry: ScenarioListEntry): void => {
     setScenario(entry);
     setOpenTable(undefined);
@@ -96,7 +96,7 @@ export function App(): JSX.Element {
           <div className="flex-1 min-w-0 flex flex-col">
             {hintVisible && scenario && !openTable && (
               <div className="te-panel border-b px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
-                <span>tip — click any table node to inspect its rows</span>
+                <span>tip: click any table node to inspect its rows</span>
                 <button type="button" onClick={markOnboarded} className="te-label hover:text-ink">
                   dismiss
                 </button>
@@ -123,7 +123,7 @@ export function App(): JSX.Element {
           )}
         </div>
 
-        {/* Mobile-only scenario chip strip — replaces the left pane below md */}
+        {/* Mobile-only scenario chip strip; replaces the left pane below md */}
         <div className="md:hidden">
           <MobileScenarioStrip activeSlug={scenario?.slug} onSelect={handleSelectScenario} />
         </div>
@@ -155,7 +155,7 @@ function EmptyVisualizer(): JSX.Element {
 function BottomToolboxPlaceholder(): JSX.Element {
   return (
     <div className="te-panel border-t h-[240px] flex items-center justify-center shrink-0">
-      <p className="te-label">toolbox — pick a scenario</p>
+      <p className="te-label">toolbox: pick a scenario</p>
     </div>
   );
 }
