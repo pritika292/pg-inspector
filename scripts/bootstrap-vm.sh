@@ -40,6 +40,7 @@ set -a
 set +a
 
 [ -n "${POSTGRES_PASSWORD:-}" ] || die "POSTGRES_PASSWORD missing from $INFRA_ENV"
+[ -n "${REDIS_PASSWORD:-}" ]    || die "REDIS_PASSWORD missing from $INFRA_ENV"
 command -v az >/dev/null || die "az CLI not installed on VM (apt-get install azure-cli)"
 
 log "Logging in with VM Managed Identity"
@@ -137,7 +138,7 @@ NODE_ENV=production
 PORT=3014
 DATABASE_URL=postgres://inspector_ro:${RO_PWD}@pritika-postgres:5432/pg_scenarios
 ADMIN_DATABASE_URL=postgres://inspector_admin:${ADMIN_PWD}@pritika-postgres:5432/pg_scenarios
-REDIS_URL=redis://pritika-redis:6379/13
+REDIS_URL=redis://:${REDIS_PASSWORD}@pritika-redis:6379/13
 AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
 AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
 AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
