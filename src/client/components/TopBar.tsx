@@ -9,7 +9,10 @@ function readTheme(): "light" | "dark" {
 }
 
 function applyTheme(theme: "light" | "dark"): void {
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  // Dark is the :root default; .light is the opt-in. Toggling .light
+  // here matches the same contract the inline init script in index.html
+  // uses, so a script-blocked load still ends up correctly themed.
+  document.documentElement.classList.toggle("light", theme === "light");
 }
 
 export function TopBar({

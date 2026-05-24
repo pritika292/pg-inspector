@@ -95,7 +95,7 @@ export function AdvisePanel({
         {/* Results pane: loading shimmer, error, or actual advice. */}
         {!advise && !loading && (
           <div className="p-4 te-label">
-            results will appear here — describe what you need above
+            results will appear here. describe what you need above.
           </div>
         )}
         {loading && (

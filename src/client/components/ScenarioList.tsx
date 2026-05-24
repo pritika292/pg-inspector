@@ -40,7 +40,7 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
         </div>
       )}
       {error && (
-        <div className="p-3 te-label text-accent-fintech">could not load scenarios — try again</div>
+        <div className="p-3 te-label text-accent-fintech">could not load scenarios; try again</div>
       )}
 
       <ul className="divide-y te-divider">

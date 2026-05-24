@@ -43,8 +43,8 @@ export function AskPanel({
       <div className="p-3 flex flex-col gap-3">
         <p className="text-[12px] leading-relaxed text-ink-dim">
           Describe what you want in plain English. The model drafts a Postgres SELECT against the{" "}
-          <span className="te-mono">{scenarioName}</span> schema and drops it into the editor above
-          — review, then click RUN.
+          <span className="te-mono">{scenarioName}</span> schema and drops it into the editor.
+          Review, then click RUN.
         </p>
 
         <textarea

@@ -44,7 +44,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return jsonOrThrow<T>(res);
 }
 
-// NDJSON streaming consumer — yields each parsed JSON object as it arrives.
+// NDJSON streaming consumer: yields each parsed JSON object as it arrives.
 // Used for /api/query/explain-ai.
 export async function* apiPostStream(path: string, body: unknown): AsyncIterable<unknown> {
   const res = await fetch(path, {
