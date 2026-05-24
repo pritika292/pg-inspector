@@ -54,9 +54,9 @@ body {
     "cv11" on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Slightly heavier than browser default 400. Inter ships a 'cv11'
-     stylistic alternate that pairs nicely with this weight. */
-  font-weight: 450;
+  /* #124: bumped 450 → 500 (medium). Reads noticeably heavier on
+     dark backgrounds without becoming bold. */
+  font-weight: 500;
   /* Bumped 15 -> 16 (#113). Every component that inherits picks up the
      change without per-class edits. */
   font-size: 16px;
@@ -71,14 +71,14 @@ code,
 /* Body paragraph text inside content surfaces (landing, about, drawers).
    Bumps presence without affecting dense data tables / labels. */
 p {
-  font-weight: 450;
+  font-weight: 500;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ─── TE-style components ─────────────────────────────────────────────── */
@@ -86,11 +86,13 @@ h4 {
 @layer components {
   .te-label {
     @apply font-mono text-te-label uppercase text-ink-mute;
-    font-weight: 600;
+    /* #124: bumped 600 → 700 (semibold → bold). Tiny all-caps labels
+       used app-wide as section headers; should pop. */
+    font-weight: 700;
   }
   .te-label-md {
     @apply font-mono text-te-label-md uppercase text-ink-dim;
-    font-weight: 600;
+    font-weight: 700;
   }
   .te-panel {
     background: var(--surface-elevated);
@@ -192,26 +194,31 @@ h4 {
 /* ─── Pulse-to-attract button ──────────────────────────────────────────── */
 
 /* Used on the AI READING button next to the PLAN tab — fires while the
-   user hasn't opened the panel yet, then settles. Glow tinted by an
-   inline --pulse-color set per-scenario from the accent var. */
+   user hasn't opened the panel yet, then settles. Now tinted red (#122)
+   instead of the scenario accent — scenario tint blended in with the
+   header tint and visitors missed it. Red reads as "act on this now."
+   Cycle bumped 1.8s → 1.2s, glow radius 4px → 7px for stronger pull. */
 .te-pulse {
-  animation: te-pulse-glow 1.8s ease-in-out infinite;
+  animation: te-pulse-glow 1.2s ease-in-out infinite;
 }
 @keyframes te-pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 var(--pulse-color, var(--ink-dim));
+    box-shadow: 0 0 0 0 rgba(255, 64, 64, 0);
     transform: scale(1);
+    border-color: rgba(255, 64, 64, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 4px var(--pulse-color, var(--ink-dim));
-    transform: scale(1.02);
+    box-shadow: 0 0 0 7px rgba(255, 64, 64, 0.25);
+    transform: scale(1.03);
+    border-color: rgba(255, 64, 64, 1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .te-pulse {
     animation: none;
-    box-shadow: 0 0 0 2px var(--pulse-color, var(--ink-dim));
+    border-color: rgba(255, 64, 64, 0.8);
+    box-shadow: 0 0 0 2px rgba(255, 64, 64, 0.3);
   }
 }
 

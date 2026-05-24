@@ -9,6 +9,14 @@
       content="Pick a scenario. Explore its schema. Write SQL or generate it from English. See query plans and get schema-improvement suggestions."
     />
     <meta name="color-scheme" content="dark light" />
+    <!-- Favicon: small database cylinder in pg-inspector's primary accent
+         cyan. Inline SVG so it ships with the HTML and respects dark/light
+         via fill, no separate asset. (#126) -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><ellipse cx='16' cy='9' rx='10' ry='3.2' fill='%233ee0f0'/><path d='M6 9 v14 c0 1.8 4.5 3.2 10 3.2 s10 -1.4 10 -3.2 v-14' fill='%233ee0f0'/><ellipse cx='16' cy='15' rx='10' ry='3.2' fill='none' stroke='%230b0b0f' stroke-width='1.2'/><ellipse cx='16' cy='21' rx='10' ry='3.2' fill='none' stroke='%230b0b0f' stroke-width='1.2'/></svg>"
+    />
     <script>
       // Dark is the default at the :root level in index.css. The .light class
       // is the opt-in. If a user has explicitly toggled to light, restore it
