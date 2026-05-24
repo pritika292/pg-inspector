@@ -28,8 +28,8 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
 
   return (
     <aside className="te-panel border-r overflow-y-auto h-full flex flex-col">
-      <div className="px-3 py-2 border-b te-hairline">
-        <span className="te-label">scenarios</span>
+      <div className="px-4 py-2.5 border-b te-hairline">
+        <span className="te-label-md text-ink">scenarios</span>
       </div>
 
       {!entries && !error && (
@@ -52,24 +52,24 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
                 type="button"
                 onClick={() => onSelect(s)}
                 className={clsx(
-                  "w-full text-left px-3 py-3 transition-colors te-fade-in",
+                  "w-full text-left px-4 py-4 transition-colors te-fade-in",
                   "hover:bg-[var(--surface-elevated)]",
                   isActive && "bg-[var(--surface-elevated)]",
                 )}
                 style={isActive ? { borderLeft: `2px solid var(${s.accentVar})` } : undefined}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[11px] uppercase tracking-widest text-ink">
+                  <span className="font-mono text-[13px] font-semibold uppercase tracking-widest text-ink">
                     {s.name}
                   </span>
                   <span
                     aria-hidden
-                    className="inline-block w-2 h-2 rounded-full"
+                    className="inline-block w-2.5 h-2.5 rounded-full"
                     style={{ background: `var(${s.accentVar})` }}
                   />
                 </div>
-                <p className="mt-1.5 text-[12px] leading-snug text-ink-dim">{s.tagline}</p>
-                <div className="mt-2 flex gap-3 text-[10px] te-mono uppercase tracking-widest text-ink-mute tabular">
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{s.tagline}</p>
+                <div className="mt-2.5 flex gap-3 text-[11px] te-mono font-semibold uppercase tracking-widest text-ink-mute tabular">
                   <span>{s.tableCount} tables</span>
                   <span>{s.rowCount.toLocaleString()} rows</span>
                 </div>

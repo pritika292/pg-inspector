@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, MiniMap, type Edge, type Node } from "reactflow";
 import dagre from "@dagrejs/dagre";
+import { X } from "lucide-react";
 import "reactflow/dist/style.css";
 import { apiGet } from "../lib/api.js";
 import type { ScenarioListEntry, ScenarioSchema } from "../lib/types.js";
 import { TableNode, type TableNodeData } from "./TableNode.js";
+
+const HELP_DISMISSED_KEY = "pg-inspector:visualizer-help-dismissed:v1";
 
 interface Props {
   scenario: ScenarioListEntry;
@@ -47,6 +50,22 @@ function laidOut(nodes: LayoutNode[], edges: LayoutEdge[]): Map<string, { x: num
 export function Visualizer({ scenario, onTableClick }: Props): JSX.Element {
   const [schema, setSchema] = useState<ScenarioSchema | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [helpOpen, setHelpOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(HELP_DISMISSED_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  function dismissHelp(): void {
+    setHelpOpen(false);
+    try {
+      localStorage.setItem(HELP_DISMISSED_KEY, "1");
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -219,28 +238,90 @@ export function Visualizer({ scenario, onTableClick }: Props): JSX.Element {
         </div>
       )}
       {schema && (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.15 }}
-          minZoom={0.2}
-          maxZoom={1.5}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={20} size={1} color="var(--seam)" />
-          <Controls showInteractive={false} />
-          <MiniMap
-            pannable
-            zoomable
-            nodeStrokeColor={() => "var(--ink-mute)"}
-            nodeColor={() => "var(--surface-elevated)"}
-            maskColor="rgba(0,0,0,0.4)"
-            style={{ background: "var(--surface)" }}
-          />
-        </ReactFlow>
+        <>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+            minZoom={0.2}
+            maxZoom={1.5}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background gap={20} size={1} color="var(--seam)" />
+            <Controls showInteractive={false} />
+            <MiniMap
+              pannable
+              zoomable
+              nodeStrokeColor={() => "var(--ink-mute)"}
+              nodeColor={() => "var(--surface-elevated)"}
+              maskColor="rgba(0,0,0,0.4)"
+              style={{ background: "var(--surface)" }}
+            />
+          </ReactFlow>
+          {helpOpen ? (
+            <HelpCard accentVar={scenario.accentVar} onClose={dismissHelp} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className="absolute top-3 left-3 te-button z-10"
+              style={{ borderLeftWidth: 2, borderLeftColor: `var(${scenario.accentVar})` }}
+              aria-label="show help"
+            >
+              ?
+            </button>
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+function HelpCard({ accentVar, onClose }: { accentVar: string; onClose: () => void }): JSX.Element {
+  const steps: { label: string; body: string }[] = [
+    {
+      label: "1 · EXPLORE",
+      body: "This is the schema. Tables grouped by sub-schema; solid edges are real FKs, dashed are soft cross-scenario refs. Click any table node to preview its rows.",
+    },
+    {
+      label: "2 · WRITE",
+      body: 'Bottom-left pane. SQL mode runs your query straight. ASK mode takes plain English (e.g. "top 10 posts by score this month") and gpt-4.1-mini drafts a SELECT against this schema. One RUN button for both.',
+    },
+    {
+      label: "3 · OUTPUT",
+      body: "Bottom-right pane. RESULTS shows rows. PLAN shows the EXPLAIN ANALYZE tree. After RUN, a pulsing READING & FIX button (top right) opens an AI panel with a plain-English plan reading and a concrete index / DDL recommendation.",
+    },
+  ];
+
+  return (
+    <div
+      className="absolute top-3 left-3 te-panel z-10 w-[360px] max-w-[calc(100%-1.5rem)] shadow-lg"
+      style={{ borderLeftWidth: 2, borderLeftColor: `var(${accentVar})` }}
+    >
+      <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
+        <span className="te-label-md text-ink">how to use</span>
+        <button type="button" onClick={onClose} className="te-button" aria-label="dismiss help">
+          <X size={11} />
+        </button>
+      </div>
+      <ul className="p-3 space-y-3">
+        {steps.map((s) => (
+          <li key={s.label}>
+            <div
+              className="te-mono text-[10px] uppercase tracking-widest"
+              style={{ color: `var(${accentVar})` }}
+            >
+              {s.label}
+            </div>
+            <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">{s.body}</p>
+          </li>
+        ))}
+      </ul>
+      <div className="px-3 py-2 border-t te-hairline te-label text-ink-mute">
+        dismiss · stays hidden across visits
+      </div>
     </div>
   );
 }
