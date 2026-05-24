@@ -7,7 +7,7 @@ const LINKEDIN = "https://linkedin.com/in/pritika-priyadarshini";
 const EMAIL = "pritikaapriyadarshini@gmail.com";
 const GITHUB = "https://github.com/pritika292";
 const PORTFOLIO = "https://pritika.studio";
-const RESUME = "https://pritika.studio/resume.pdf";
+const RESUME = "https://pritika.studio/pritika_resume.pdf";
 
 interface TechRow {
   name: string;
@@ -132,7 +132,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             <section className="space-y-6">
               <p className="te-label">contact</p>
               <ul className="te-panel divide-y divide-seam">
-                <ContactRow href={RESUME} label="Resume" value="resume.pdf" external />
+                <ContactRow href={RESUME} label="Resume" value="pritika_resume.pdf" external />
                 <ContactRow href={`mailto:${EMAIL}`} label="Email" value={EMAIL} />
                 <ContactRow
                   href={LINKEDIN}
