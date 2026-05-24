@@ -277,9 +277,14 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     (state.mode === "sql" ? state.sql.trim().length > 0 : state.ask.trim().length > 0);
 
   return (
-    <div className="te-panel h-[400px] shrink-0 flex overflow-hidden">
+    // Two side-by-side rounded cards with a gap between them (#127). Was a
+    // single outer te-panel with an internal hairline divider — only the
+    // outer corners ended up rounded; the inner edges where the panes met
+    // stayed square. Splitting into two real te-panel cards gives every
+    // corner the same rounding.
+    <div className="h-[400px] shrink-0 flex gap-2 md:gap-3">
       {/* ──── WRITE pane ──── */}
-      <div className="w-1/2 flex flex-col min-w-0 border-r te-hairline">
+      <div className="te-panel w-1/2 flex flex-col min-w-0 overflow-hidden">
         <div
           className="px-3 py-2 te-header-tint flex items-center justify-between"
           style={{ ["--header-tint" as never]: `var(${accent})` }}
@@ -317,17 +322,13 @@ export function Toolbox({ scenario }: Props): JSX.Element {
         )}
       </div>
 
-      {/* visual joiner */}
-      <div
-        className="hidden md:flex flex-col items-center justify-center px-1 border-r te-hairline"
-        style={{ background: "var(--surface)" }}
-        aria-hidden
-      >
+      {/* Tiny visual joiner sits in the gap between the two cards. */}
+      <div className="hidden md:flex flex-col items-center justify-center px-0" aria-hidden>
         <ArrowRight size={12} className="text-ink-mute" />
       </div>
 
       {/* ──── OUTPUT pane ──── */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className="te-panel flex-1 flex flex-col min-w-0 relative overflow-hidden">
         <div
           className="px-3 py-2 te-header-tint flex items-center justify-between gap-3"
           style={{ ["--header-tint" as never]: `var(${accent})` }}
