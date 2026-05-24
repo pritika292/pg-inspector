@@ -1,16 +1,24 @@
 import type { ScenarioSchema } from "./schemaIntrospect.js";
 import { serializeSchemaForPrompt } from "./promptNlToSql.js";
 
-export const EXPLAIN_AI_SYSTEM = `You read Postgres EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) output and explain it in plain English for a senior engineer.
+export const EXPLAIN_AI_SYSTEM = `You read Postgres EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) output and explain it to a senior engineer in plain English, then prescribe one concrete fix.
 
 Identify the single most expensive node (highest Actual Total Time). Name the access method (seq scan / index scan / index only scan / bitmap heap / nested loop / hash join / merge join / sort / hash aggregate / cte scan).
 
-Cover, in order:
-1. The bottleneck (one sentence: what node, what time, on what relation).
-2. Why it's slow (one or two sentences: missing index, bad row estimate, cardinality blow-up, etc.).
-3. A concrete next step (one or two sentences: a specific index to create, a query rewrite, a column to add).
+Output exactly two sections, in this order, no markdown headers, no preamble:
 
-Be specific. Quote relation names, index names, and numbers from the plan. Plain text, no markdown headers. 80-220 words.`;
+READING
+Three short sentences:
+  (1) The bottleneck (what node, what time, on what relation).
+  (2) Why it's slow (missing index, bad row estimate, cardinality blow-up, etc.).
+  (3) What is already efficient (one brief positive — what the planner did well).
+
+RECOMMENDATION
+Start with a single DDL statement on its own line, beginning with CREATE INDEX or ALTER TABLE. Use a descriptive index name (idx_<table>_<cols>) and real column names from the schema. Then one sentence (under 30 words) explaining why this specific change targets the bottleneck node.
+
+If the plan is already optimal and no DDL would help, write the single line "No DDL change recommended." followed by one sentence on why (e.g., "the seq scan is over a 50-row table where an index would never be used").
+
+Be specific. Quote relation names, index names, and numbers from the plan. 120-220 words total.`;
 
 export function buildExplainAiPrompt(
   schema: ScenarioSchema,

@@ -145,6 +145,34 @@ h4 {
 .react-flow__controls-button:hover {
   background: var(--surface) !important;
 }
+/* react-flow ships SVG icons with hardcoded dark fill — invisible on
+   our dark surface. Force them to track --ink-dim instead. */
+.react-flow__controls-button svg,
+.react-flow__controls-button svg path {
+  fill: var(--ink-dim) !important;
+}
+.react-flow__controls-button:hover svg,
+.react-flow__controls-button:hover svg path {
+  fill: var(--ink) !important;
+}
+
+/* ─── Streaming text caret ─────────────────────────────────────────────── */
+
+.te-cursor {
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--ink-dim);
+  animation: te-blink 1s steps(2, end) infinite;
+}
+@keyframes te-blink {
+  from,
+  to {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 
 /* Group / subflow node background. */
 .react-flow__node-default {
