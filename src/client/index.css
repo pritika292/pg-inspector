@@ -237,6 +237,17 @@ h4 {
   border: none;
 }
 
+/* ─── Header tint per scenario ─────────────────────────────────────────── */
+
+/* Each pane on /app has a header strip (title + tabs). Tinting the strip
+   with the active scenario accent makes which scenario you're in
+   unmissable. Set --header-tint inline (defaults to a neutral ink-mute
+   when no scenario context is available). */
+.te-header-tint {
+  background: color-mix(in oklab, var(--header-tint, var(--ink-mute)) 14%, var(--surface-elevated));
+  border-bottom: 1px solid color-mix(in oklab, var(--header-tint, var(--ink-mute)) 30%, var(--seam));
+}
+
 /* ─── Hover tooltip (chip overflow reveal, #110) ───────────────────────── */
 
 /* Pattern: a `.te-tooltip-host` wrapper with `position: relative`, an

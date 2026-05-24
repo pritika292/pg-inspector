@@ -261,10 +261,13 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     (state.mode === "sql" ? state.sql.trim().length > 0 : state.ask.trim().length > 0);
 
   return (
-    <div className="te-panel !rounded-none border-t h-[400px] shrink-0 flex">
+    <div className="te-panel h-[400px] shrink-0 flex overflow-hidden">
       {/* ──── WRITE pane ──── */}
       <div className="w-1/2 flex flex-col min-w-0 border-r te-hairline">
-        <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
+        <div
+          className="px-3 py-2 te-header-tint flex items-center justify-between"
+          style={{ ["--header-tint" as never]: `var(${accent})` }}
+        >
           <span className="te-label">write</span>
           <ModeStrip
             mode={state.mode}
@@ -309,7 +312,10 @@ export function Toolbox({ scenario }: Props): JSX.Element {
 
       {/* ──── OUTPUT pane ──── */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        <div className="px-3 py-2 border-b te-hairline flex items-center justify-between gap-3">
+        <div
+          className="px-3 py-2 te-header-tint flex items-center justify-between gap-3"
+          style={{ ["--header-tint" as never]: `var(${accent})` }}
+        >
           <div className="flex items-center gap-3">
             <span className="te-label">output</span>
             <OutTabs
@@ -706,7 +712,10 @@ function AiDrawer(p: {
         role="dialog"
         aria-label="AI reading and DDL recommendation"
       >
-        <header className="px-4 py-2.5 border-b te-hairline flex items-center justify-between">
+        <header
+          className="px-4 py-2.5 te-header-tint flex items-center justify-between"
+          style={{ ["--header-tint" as never]: `var(${p.accent})` }}
+        >
           <span className="te-label-md text-ink flex items-center gap-2">
             <Sparkles size={12} /> reading &amp; recommendation
           </span>

@@ -80,11 +80,15 @@ export function App(): JSX.Element {
         onHomeClick={() => go("/")}
       />
 
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 flex min-h-0">
-          <div className="w-[320px] shrink-0 hidden md:flex md:flex-col">
+      {/* Padded body with explicit gaps between panes so each one reads as
+          its own rounded card instead of bleeding edge-to-edge (#110
+          follow-up). The padding is small enough on mobile to still feel
+          dense. */}
+      <div className="flex-1 flex flex-col min-h-0 p-2 md:p-3 gap-2 md:gap-3">
+        <div className="flex-1 flex min-h-0 gap-2 md:gap-3">
+          <div className="w-[320px] shrink-0 hidden md:flex md:flex-col gap-2 md:gap-3">
             {hintVisible && !scenario && (
-              <div className="te-panel !rounded-none border-b px-3 py-2 te-label text-ink-dim">
+              <div className="te-panel px-3 py-2 te-label text-ink-dim">
                 ← pick a scenario to begin
               </div>
             )}
@@ -93,9 +97,9 @@ export function App(): JSX.Element {
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 min-w-0 flex flex-col gap-2 md:gap-3">
             {hintVisible && scenario && !openTable && (
-              <div className="te-panel !rounded-none border-b px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
+              <div className="te-panel px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
                 <span>tip: click any table node to inspect its rows</span>
                 <button type="button" onClick={markOnboarded} className="te-label hover:text-ink">
                   dismiss
@@ -117,6 +121,7 @@ export function App(): JSX.Element {
                 scenarioSlug={scenario.slug}
                 schemaName={openTable.schemaName}
                 tableName={openTable.tableName}
+                accentVar={scenario.accentVar}
                 onClose={() => setOpenTable(undefined)}
               />
             </div>
@@ -136,7 +141,7 @@ export function App(): JSX.Element {
 
 function EmptyVisualizer(): JSX.Element {
   return (
-    <div className="te-panel !rounded-none border-l border-r grid place-items-center h-full">
+    <div className="te-panel grid place-items-center h-full">
       <div className="text-center max-w-md px-6">
         <p className="te-label">visualizer</p>
         <p className="mt-2 font-mono text-[14px] uppercase tracking-widest text-ink">
@@ -154,7 +159,7 @@ function EmptyVisualizer(): JSX.Element {
 
 function BottomToolboxPlaceholder(): JSX.Element {
   return (
-    <div className="te-panel !rounded-none border-t h-[240px] flex items-center justify-center shrink-0">
+    <div className="te-panel h-[240px] flex items-center justify-center shrink-0">
       <p className="te-label">toolbox: pick a scenario</p>
     </div>
   );
@@ -177,7 +182,7 @@ function MobileScenarioStrip({
   }, []);
 
   return (
-    <div className="te-panel !rounded-none border-t flex gap-1 overflow-x-auto px-2 py-1.5">
+    <div className="te-panel flex gap-1 overflow-x-auto px-2 py-1.5">
       {entries?.map((s) => {
         const isActive = activeSlug === s.slug;
         return (
