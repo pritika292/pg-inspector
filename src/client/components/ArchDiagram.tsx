@@ -1,11 +1,74 @@
 // Dense distributed-systems topology for the pg-inspector About page.
 // Plain SVG. Boxes grouped by tier with a VM "subgraph" frame so the
 // picture reads as real infrastructure, not a marketing flowchart.
+//
+// Box helper auto-wraps long sub-labels at the " · " separator and
+// stretches the rect to fit additional lines. Each box can carry a
+// `tone` prop that tints the stroke + label using pg-inspector's
+// scenario palette (social-violet, enterprise-sky, infra-amber,
+// ecommerce-emerald, fintech-cyan) so the tier rhythm reads at a glance.
+
+type Tone = "accent" | "edge" | "safety" | "ai" | "data" | "secrets" | "control" | "neutral";
+
+const TONE: Record<Tone, { stroke: string; label: string }> = {
+  // pg-inspector's primary accent is fintech-cyan; reuse for Express.
+  accent: {
+    stroke: "stroke-[var(--accent-fintech)]",
+    label: "fill-[var(--accent-fintech)]",
+  },
+  edge: {
+    stroke: "stroke-[var(--accent-social)]",
+    label: "fill-[var(--accent-social)]",
+  },
+  safety: {
+    stroke: "stroke-[var(--accent-enterprise)]",
+    label: "fill-[var(--accent-enterprise)]",
+  },
+  ai: {
+    stroke: "stroke-[var(--accent-infra)]",
+    label: "fill-[var(--accent-infra)]",
+  },
+  data: {
+    stroke: "stroke-[var(--accent-ecommerce)]",
+    label: "fill-[var(--accent-ecommerce)]",
+  },
+  secrets: {
+    stroke: "stroke-[var(--accent-social)]",
+    label: "fill-[var(--accent-social)]",
+  },
+  control: {
+    stroke: "stroke-[var(--accent-enterprise)]",
+    label: "fill-[var(--accent-enterprise)]",
+  },
+  neutral: { stroke: "stroke-ink-mute", label: "fill-ink" },
+};
+
+const SUB_FONT_SIZE = 11;
+
+function wrapSub(sub: string, w: number): string[] {
+  const charBudget = Math.floor((w - 16) / (SUB_FONT_SIZE * 0.55));
+  if (sub.length <= charBudget) return [sub];
+  const tokens = sub.split(" · ");
+  if (tokens.length === 1) return [sub];
+  const lines: string[] = [];
+  let cur = "";
+  for (const t of tokens) {
+    const next = cur ? `${cur} · ${t}` : t;
+    if (next.length <= charBudget) {
+      cur = next;
+    } else {
+      if (cur) lines.push(cur);
+      cur = t;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 
 export function ArchDiagram(): JSX.Element {
   return (
     <svg
-      viewBox="0 0 1200 720"
+      viewBox="0 0 1200 760"
       className="block w-full h-auto"
       role="img"
       aria-label="pg-inspector architecture: browser hits Caddy on an Azure VM, Express runs SQL through a three-layer safety pipeline against a Postgres role with SELECT-only grants, schema cache lives in Redis, AI calls flow through Managed Identity to Azure OpenAI without API keys, and per-call token usage is reported to controlroom."
@@ -27,32 +90,24 @@ export function ArchDiagram(): JSX.Element {
 
       {/* External (left) */}
       <GroupLabel x={100} y={32} label="EXTERNAL" />
-      <Box x={20} y={50} w={200} h={56} label="browser" subLabel="React · react-flow · dagre" />
+      <Box x={20} y={50} w={200} h={56} label="browser" sub="React · react-flow · dagre" />
       <Box
         x={20}
         y={130}
         w={200}
         h={56}
         label="controlroom"
-        subLabel="POST /api/ai-usage/:slug"
+        sub="POST /api/ai-usage/:slug"
         dashed
       />
-      <Box
-        x={20}
-        y={210}
-        w={200}
-        h={56}
-        label="GitHub Actions"
-        subLabel="OIDC token exchange"
-        dashed
-      />
+      <Box x={20} y={210} w={200} h={56} label="GitHub Actions" sub="OIDC token exchange" dashed />
 
       {/* VM subgraph */}
-      <VmFrame x={280} y={20} w={620} h={680} label="Azure VM · B2as_v2 · northcentralus" />
+      <VmFrame x={280} y={20} w={620} h={720} label="Azure VM · B2as_v2 · northcentralus" />
 
       {/* Edge: Caddy */}
       <GroupLabel x={420} y={62} label="EDGE" />
-      <Box x={310} y={80} w={220} h={56} label="Caddy" subLabel="TLS · pg.pritika.studio" />
+      <Box x={310} y={80} w={220} h={56} label="Caddy" sub="TLS · pg.pritika.studio" tone="edge" />
 
       {/* Express tier */}
       <GroupLabel x={420} y={170} label="APP · pg-inspector :3014" />
@@ -62,8 +117,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={62}
         label="Express 5 · Node 20"
-        subLabel="helmet · rate-limit · zod"
-        accent
+        sub="helmet · rate-limit · zod"
+        tone="accent"
       />
 
       {/* Three SQL safety layers */}
@@ -74,7 +129,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={56}
         label="Layer 1 · Postgres role"
-        subLabel="inspector_ro · SELECT only"
+        sub="inspector_ro · SELECT only"
+        tone="safety"
       />
       <Box
         x={310}
@@ -82,7 +138,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={56}
         label="Layer 2 · AST validator"
-        subLabel="pgsql-ast-parser · 1 SELECT"
+        sub="pgsql-ast-parser · 1 SELECT"
+        tone="safety"
       />
       <Box
         x={310}
@@ -90,7 +147,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={56}
         label="Layer 3 · safe runner"
-        subLabel="BEGIN READ ONLY · 1s timeout · LIMIT 501"
+        sub="BEGIN READ ONLY · 1s timeout · LIMIT 501"
+        tone="safety"
       />
 
       {/* AI client */}
@@ -101,7 +159,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={56}
         label="openai SDK"
-        subLabel="chat + stream · daily budget 200"
+        sub="chat + stream · daily budget 200"
+        tone="ai"
       />
       <Box
         x={310}
@@ -109,7 +168,8 @@ export function ArchDiagram(): JSX.Element {
         w={220}
         h={44}
         label="aiUsageEmit"
-        subLabel="fire-and-forget POST"
+        sub="fire-and-forget POST"
+        tone="ai"
         dashed
       />
 
@@ -121,7 +181,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={70}
         label="Postgres 16"
-        subLabel="5 scenarios · 21 sub-schemas · ~75K rows"
+        sub="5 scenarios · 21 sub-schemas · ~75K rows"
+        tone="data"
       />
       <Box
         x={620}
@@ -129,7 +190,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="Redis 7 · DB 13"
-        subLabel="schema cache 5m · rate buckets"
+        sub="schema cache 5m · rate buckets"
+        tone="data"
       />
       <GroupLabel x={730} y={250} label="POOLS · SEPARATED BY ROLE" />
       <Box
@@ -138,7 +200,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={50}
         label="admin pool"
-        subLabel="boot-only: migrate · seed"
+        sub="boot-only: migrate · seed"
+        tone="data"
         dashed
       />
       <Box
@@ -147,7 +210,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={50}
         label="runtime pool"
-        subLabel="inspector_ro · all HTTP traffic"
+        sub="inspector_ro · all HTTP traffic"
+        tone="data"
       />
 
       {/* AI subsystem */}
@@ -158,7 +222,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="gpt-4.1-mini deployment"
-        subLabel="pritika-ai · north central"
+        sub="pritika-ai · north central"
+        tone="ai"
       />
 
       {/* Secrets + deploy */}
@@ -169,7 +234,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={50}
         label="Managed Identity"
-        subLabel="VM system-assigned"
+        sub="VM system-assigned"
+        tone="secrets"
         dashed
       />
       <Box
@@ -178,7 +244,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={50}
         label="Azure Key Vault"
-        subLabel="Postgres creds · boot only"
+        sub="Postgres creds · boot only"
+        tone="secrets"
         dashed
       />
 
@@ -190,7 +257,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="GitHub · pritika292/pg-inspector"
-        subLabel="ci · deploy · OIDC"
+        sub="ci · deploy · OIDC"
+        tone="control"
         dashed
       />
       <Box
@@ -199,7 +267,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="Azure Entra ID"
-        subLabel="federated identity credential"
+        sub="federated identity credential"
+        tone="control"
         dashed
       />
       <Box
@@ -208,7 +277,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="Azure RBAC"
-        subLabel="Cognitive Services User on pritika-ai"
+        sub="Cognitive Services User on pritika-ai"
+        tone="control"
         dashed
       />
       <Box
@@ -217,7 +287,8 @@ export function ArchDiagram(): JSX.Element {
         w={260}
         h={56}
         label="az vm run-command"
-        subLabel="git pull · compose up"
+        sub="git pull · compose up"
+        tone="control"
         dashed
       />
 
@@ -233,9 +304,7 @@ export function ArchDiagram(): JSX.Element {
 
       {/* Layer 3 -> Postgres (runtime pool) */}
       <Edge from={[530, 468]} to={[620, 355]} />
-      {/* admin pool -> Postgres (boot only) */}
       <Edge from={[750, 320]} to={[750, 150]} dashed />
-      {/* runtime pool -> Postgres */}
       <Edge from={[750, 330]} to={[750, 150]} />
 
       {/* Express -> Redis */}
@@ -243,9 +312,7 @@ export function ArchDiagram(): JSX.Element {
 
       {/* AI client -> Azure OpenAI */}
       <Edge from={[530, 568]} to={[620, 458]} />
-      {/* AI client uses MI */}
       <Edge from={[530, 596]} to={[620, 555]} dashed />
-      {/* MI -> Key Vault (boot) */}
       <Edge from={[750, 580]} to={[750, 590]} dashed />
 
       {/* aiUsageEmit -> controlroom */}
@@ -258,7 +325,7 @@ export function ArchDiagram(): JSX.Element {
       <Edge from={[920, 288]} to={[530, 240]} dashed />
 
       {/* Caption */}
-      <text x={600} y={702} textAnchor="middle" className="fill-ink-mute font-mono" fontSize={13}>
+      <text x={600} y={742} textAnchor="middle" className="fill-ink-mute font-mono" fontSize={13}>
         ── solid: query / hot path - - dashed: auth · async telemetry · deploy
       </text>
     </svg>
@@ -325,8 +392,8 @@ function Box({
   w,
   h,
   label,
-  subLabel,
-  accent = false,
+  sub,
+  tone = "neutral",
   dashed = false,
 }: {
   x: number;
@@ -334,15 +401,16 @@ function Box({
   w: number;
   h: number;
   label: string;
-  subLabel?: string;
-  accent?: boolean;
+  sub?: string;
+  tone?: Tone;
   dashed?: boolean;
 }): JSX.Element {
-  const stroke = accent
-    ? "stroke-[var(--accent-fintech)]"
-    : dashed
-      ? "stroke-seam"
-      : "stroke-ink-mute";
+  const subLines = sub ? wrapSub(sub, w) : [];
+  const extraHeight = Math.max(0, (subLines.length - 1) * 12);
+  const rectH = h + extraHeight;
+  const palette = TONE[tone];
+  const isAccent = tone === "accent";
+  const strokeClass = dashed && tone === "neutral" ? "stroke-seam" : palette.stroke;
   const dashAttr = dashed ? "6 4" : undefined;
   return (
     <g>
@@ -350,34 +418,35 @@ function Box({
         x={x}
         y={y}
         width={w}
-        height={h}
+        height={rectH}
         rx={6}
         ry={6}
-        className={`fill-transparent ${stroke}`}
-        strokeWidth={1.5}
+        className={`fill-transparent ${strokeClass}`}
+        strokeWidth={isAccent ? 1.75 : 1.5}
         strokeDasharray={dashAttr}
       />
       <text
         x={x + w / 2}
-        y={subLabel === undefined ? y + h / 2 + 5 : y + h / 2 - 4}
+        y={sub ? y + h / 2 - 4 : y + h / 2 + 5}
         textAnchor="middle"
-        className={accent ? "fill-[var(--accent-fintech)] font-mono" : "fill-ink font-mono"}
-        fontSize={accent ? 16 : 14}
-        fontWeight={accent ? 600 : 500}
+        className={`${palette.label} font-mono`}
+        fontSize={isAccent ? 16 : 14}
+        fontWeight={isAccent ? 600 : 500}
       >
         {label}
       </text>
-      {subLabel !== undefined && (
+      {subLines.map((line, i) => (
         <text
+          key={i}
           x={x + w / 2}
-          y={y + h / 2 + 14}
+          y={y + h / 2 + 14 + i * 12}
           textAnchor="middle"
           className="fill-ink-mute font-mono"
-          fontSize={11}
+          fontSize={SUB_FONT_SIZE}
         >
-          {subLabel}
+          {line}
         </text>
-      )}
+      ))}
     </g>
   );
 }
