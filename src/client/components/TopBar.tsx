@@ -15,9 +15,11 @@ function applyTheme(theme: "light" | "dark"): void {
 export function TopBar({
   activeScenarioName,
   onAboutClick,
+  onHomeClick,
 }: {
   activeScenarioName?: string;
   onAboutClick?: () => void;
+  onHomeClick?: () => void;
 }): JSX.Element {
   const [theme, setTheme] = useState<"light" | "dark">(readTheme);
 
@@ -29,7 +31,18 @@ export function TopBar({
   return (
     <header className="te-panel border-b flex items-center justify-between px-4 py-2.5">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="te-label text-ink">pg-inspector</span>
+        {onHomeClick ? (
+          <button
+            type="button"
+            onClick={onHomeClick}
+            className="te-label text-ink hover:text-ink-dim"
+            aria-label="home"
+          >
+            pg-inspector
+          </button>
+        ) : (
+          <span className="te-label text-ink">pg-inspector</span>
+        )}
         <span className="text-ink-mute">/</span>
         <span className="font-mono text-[11px] uppercase tracking-widest text-ink-dim truncate">
           {activeScenarioName ?? "select a scenario"}

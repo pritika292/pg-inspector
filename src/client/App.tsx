@@ -5,6 +5,7 @@ import { Visualizer } from "./components/Visualizer.js";
 import { TableDataView } from "./components/TableDataView.js";
 import { Toolbox } from "./components/Toolbox.js";
 import { About } from "./pages/About.js";
+import { Landing } from "./pages/Landing.js";
 import type { ScenarioListEntry } from "./lib/types.js";
 
 interface OpenTable {
@@ -16,10 +17,26 @@ function currentPath(): string {
   return typeof window === "undefined" ? "/" : window.location.pathname;
 }
 
+const ONBOARDED_KEY = "pg-inspector:onboarded:v1";
+
 export function App(): JSX.Element {
   const [path, setPath] = useState<string>(currentPath);
   const [scenario, setScenario] = useState<ScenarioListEntry | undefined>(undefined);
   const [openTable, setOpenTable] = useState<OpenTable | undefined>(undefined);
+  // Onboarding hint visibility — gated by localStorage so it only shows on
+  // a user's first visit per browser.
+  const [hintVisible, setHintVisible] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(ONBOARDED_KEY) !== "1";
+  });
+  const markOnboarded = (): void => {
+    try {
+      localStorage.setItem(ONBOARDED_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    setHintVisible(false);
+  };
 
   useEffect(() => {
     const onPop = (): void => setPath(currentPath());
@@ -30,15 +47,21 @@ export function App(): JSX.Element {
   const go = (p: string): void => {
     if (typeof window !== "undefined") window.history.pushState({}, "", p);
     setPath(p);
+    window.scrollTo({ top: 0 });
   };
 
   if (path === "/about") {
     return <About onBack={() => go("/")} />;
   }
+  if (path === "/" || path === "") {
+    return <Landing onTryIt={() => go("/app")} onAbout={() => go("/about")} />;
+  }
 
+  // /app — the working surface
   const handleSelectScenario = (entry: ScenarioListEntry): void => {
     setScenario(entry);
     setOpenTable(undefined);
+    if (hintVisible) markOnboarded();
   };
 
   const handleTableClick = (schemaName: string, tableName: string): void => {
@@ -51,20 +74,41 @@ export function App(): JSX.Element {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)] text-ink">
-      <TopBar activeScenarioName={scenario?.name} onAboutClick={() => go("/about")} />
+      <TopBar
+        activeScenarioName={scenario?.name}
+        onAboutClick={() => go("/about")}
+        onHomeClick={() => go("/")}
+      />
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="w-[260px] shrink-0 hidden md:block">
-            <ScenarioList activeSlug={scenario?.slug} onSelect={handleSelectScenario} />
+          <div className="w-[260px] shrink-0 hidden md:flex md:flex-col">
+            {hintVisible && !scenario && (
+              <div className="te-panel border-b px-3 py-2 te-label text-ink-dim">
+                ← pick a scenario to begin
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <ScenarioList activeSlug={scenario?.slug} onSelect={handleSelectScenario} />
+            </div>
           </div>
 
-          <div className="flex-1 min-w-0">
-            {scenario ? (
-              <Visualizer scenario={scenario} onTableClick={handleTableClick} />
-            ) : (
-              <EmptyVisualizer />
+          <div className="flex-1 min-w-0 flex flex-col">
+            {hintVisible && scenario && !openTable && (
+              <div className="te-panel border-b px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
+                <span>tip — click any table node to inspect its rows</span>
+                <button type="button" onClick={markOnboarded} className="te-label hover:text-ink">
+                  dismiss
+                </button>
+              </div>
             )}
+            <div className="flex-1 min-h-0">
+              {scenario ? (
+                <Visualizer scenario={scenario} onTableClick={handleTableClick} />
+              ) : (
+                <EmptyVisualizer />
+              )}
+            </div>
           </div>
 
           {openTable && scenario && (

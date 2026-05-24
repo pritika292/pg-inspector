@@ -9,7 +9,7 @@ import { scenariosRouter } from "./routes/scenarios.js";
 import { queryRouter } from "./routes/queryRun.js";
 import { queryAiRouter } from "./routes/queryAi.js";
 
-const SPA_PATHS = ["/", "/about"];
+const SPA_PATHS = ["/", "/about", "/app"];
 
 // Resolve the built-client directory. In production (running from dist/),
 // it's at ../client. In tests/dev (running TypeScript from src/), the built
