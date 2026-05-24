@@ -34,7 +34,11 @@ export interface AppOptions {
 export function createApp(opts: AppOptions = {}): Express {
   const app = express();
 
-  app.set("trust proxy", true);
+  // Caddy is the one hop between us and the client. Trusting exactly one
+  // hop satisfies express-rate-limit's validator (which refuses the bare
+  // `true` setting as too permissive — a spoofed X-Forwarded-For could
+  // otherwise bypass the per-IP bucket).
+  app.set("trust proxy", 1);
   app.disable("x-powered-by");
   app.use(securityHeaders);
 
