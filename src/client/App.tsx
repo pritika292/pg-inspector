@@ -82,9 +82,9 @@ export function App(): JSX.Element {
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex min-h-0">
-          <div className="w-[260px] shrink-0 hidden md:flex md:flex-col">
+          <div className="w-[320px] shrink-0 hidden md:flex md:flex-col">
             {hintVisible && !scenario && (
-              <div className="te-panel border-b px-3 py-2 te-label text-ink-dim">
+              <div className="te-panel !rounded-none border-b px-3 py-2 te-label text-ink-dim">
                 ← pick a scenario to begin
               </div>
             )}
@@ -95,7 +95,7 @@ export function App(): JSX.Element {
 
           <div className="flex-1 min-w-0 flex flex-col">
             {hintVisible && scenario && !openTable && (
-              <div className="te-panel border-b px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
+              <div className="te-panel !rounded-none border-b px-3 py-1.5 te-label text-ink-dim flex items-center justify-between">
                 <span>tip: click any table node to inspect its rows</span>
                 <button type="button" onClick={markOnboarded} className="te-label hover:text-ink">
                   dismiss
@@ -136,13 +136,13 @@ export function App(): JSX.Element {
 
 function EmptyVisualizer(): JSX.Element {
   return (
-    <div className="te-panel border-l border-r grid place-items-center h-full">
+    <div className="te-panel !rounded-none border-l border-r grid place-items-center h-full">
       <div className="text-center max-w-md px-6">
         <p className="te-label">visualizer</p>
-        <p className="mt-2 font-mono text-[12px] uppercase tracking-widest text-ink">
+        <p className="mt-2 font-mono text-[14px] uppercase tracking-widest text-ink">
           pick a scenario on the left
         </p>
-        <p className="mt-3 text-[12px] text-ink-dim">
+        <p className="mt-3 text-[14px] text-ink-dim">
           Each scenario models a real industry's multi-schema layout. Click a table node to inspect
           its rows; use the toolbox below to write SQL, generate it from English, or get
           schema-improvement suggestions.
@@ -154,7 +154,7 @@ function EmptyVisualizer(): JSX.Element {
 
 function BottomToolboxPlaceholder(): JSX.Element {
   return (
-    <div className="te-panel border-t h-[240px] flex items-center justify-center shrink-0">
+    <div className="te-panel !rounded-none border-t h-[240px] flex items-center justify-center shrink-0">
       <p className="te-label">toolbox: pick a scenario</p>
     </div>
   );
@@ -177,7 +177,7 @@ function MobileScenarioStrip({
   }, []);
 
   return (
-    <div className="te-panel border-t flex gap-1 overflow-x-auto px-2 py-1.5">
+    <div className="te-panel !rounded-none border-t flex gap-1 overflow-x-auto px-2 py-1.5">
       {entries?.map((s) => {
         const isActive = activeSlug === s.slug;
         return (

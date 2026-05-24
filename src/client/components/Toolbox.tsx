@@ -39,11 +39,26 @@ interface State {
   aiAcknowledged: boolean;
   // Whether the side drawer over the OUTPUT pane is visible.
   aiOpen: boolean;
-  askError?: string;
+  // ASK errors split by kind so the UI can soften CANNOT_ANSWER into a
+  // "try a different question" hint instead of a red error log (#114).
+  askErrorKind?: "cannot_answer" | "failed";
+  askErrorMessage?: string;
+  // AI repair flow for failed SQL (#114). repairing is true while the
+  // call is in flight; repair holds the latest suggestion.
+  repairing: boolean;
+  repair?: RepairResult;
+}
+
+interface RepairResult {
+  sql?: string;
+  why?: string;
+  error?: string;
 }
 
 const emptyState = (): State => ({
-  mode: "sql",
+  // Default to ASK — first-time visitors get the most impressive flow
+  // (English → SQL) without flipping any toggle (#110).
+  mode: "ask",
   sql: "",
   ask: "",
   running: false,
@@ -53,6 +68,7 @@ const emptyState = (): State => ({
   aiAttempted: false,
   aiAcknowledged: false,
   aiOpen: false,
+  repairing: false,
 });
 
 export function Toolbox({ scenario }: Props): JSX.Element {
@@ -111,6 +127,9 @@ export function Toolbox({ scenario }: Props): JSX.Element {
       aiAttempted: false,
       aiAcknowledged: false,
       aiOpen: false,
+      // Stale repair from a previous failed query is no longer relevant.
+      repair: undefined,
+      repairing: false,
     }));
     const [runOutcome, explainOutcome] = await Promise.allSettled([
       apiPost<RunResult>("/api/query/run", { scenarioSlug: scenario.slug, sql: sqlToRun }),
@@ -139,27 +158,71 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     // ASK mode: convert to SQL, write into the SQL state, then run.
     const question = state.ask.trim();
     if (!question) return;
-    setState((s) => ({ ...s, running: true, askError: undefined }));
+    setState((s) => ({
+      ...s,
+      running: true,
+      askErrorKind: undefined,
+      askErrorMessage: undefined,
+    }));
     try {
       const result = await apiPost<NlToSqlResult>("/api/query/nl-to-sql", {
         scenarioSlug: scenario.slug,
         question,
       });
       if (result.sql) {
-        setState((s) => ({ ...s, sql: result.sql!, askError: undefined }));
+        setState((s) => ({
+          ...s,
+          sql: result.sql!,
+          askErrorKind: undefined,
+          askErrorMessage: undefined,
+        }));
         await runSqlAndExplain(result.sql);
       } else {
+        // Split CANNOT_ANSWER (the schema can't support this question — a
+        // soft outcome) from genuine request failures (rate limit, network,
+        // etc.) so the UI can render each appropriately (#114).
+        const kind = result.error === "CANNOT_ANSWER" ? "cannot_answer" : "failed";
         setState((s) => ({
           ...s,
           running: false,
-          askError: `${result.error ?? "could not generate sql"}${
-            result.reason ? `: ${result.reason}` : ""
-          }`,
+          askErrorKind: kind,
+          askErrorMessage: result.reason,
         }));
       }
     } catch (err) {
-      setState((s) => ({ ...s, running: false, askError: errorMessage(err) }));
+      setState((s) => ({
+        ...s,
+        running: false,
+        askErrorKind: "failed",
+        askErrorMessage: errorMessage(err),
+      }));
     }
+  }
+
+  async function repairSql(): Promise<void> {
+    const sqlToFix = state.sql.trim();
+    const errorText = state.runError;
+    if (!sqlToFix || !errorText) return;
+    setState((s) => ({ ...s, repairing: true, repair: undefined }));
+    try {
+      const result = await apiPost<RepairResult>("/api/query/repair", {
+        scenarioSlug: scenario.slug,
+        sql: sqlToFix,
+        error: errorText,
+      });
+      setState((s) => ({ ...s, repairing: false, repair: result }));
+    } catch (err) {
+      setState((s) => ({
+        ...s,
+        repairing: false,
+        repair: { error: "request_failed", why: errorMessage(err) },
+      }));
+    }
+  }
+
+  function applyRepair(): void {
+    if (!state.repair?.sql) return;
+    setState((s) => ({ ...s, sql: s.repair!.sql!, repair: undefined, runError: undefined }));
   }
 
   async function streamPlanReading(): Promise<void> {
@@ -198,7 +261,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     (state.mode === "sql" ? state.sql.trim().length > 0 : state.ask.trim().length > 0);
 
   return (
-    <div className="te-panel border-t h-[400px] shrink-0 flex">
+    <div className="te-panel !rounded-none border-t h-[400px] shrink-0 flex">
       {/* ──── WRITE pane ──── */}
       <div className="w-1/2 flex flex-col min-w-0 border-r te-hairline">
         <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
@@ -228,7 +291,8 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             running={state.running}
             canRun={canRun}
             onRun={handleRun}
-            error={state.askError}
+            errorKind={state.askErrorKind}
+            errorMessage={state.askErrorMessage}
             accent={accent}
           />
         )}
@@ -280,7 +344,14 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             (state.runResult ? (
               <TableView result={state.runResult} />
             ) : state.runError ? (
-              <ErrorPanel msg={state.runError} />
+              <FailedSqlPanel
+                error={state.runError}
+                repair={state.repair}
+                repairing={state.repairing}
+                onFixWithAi={repairSql}
+                onApplyRepair={applyRepair}
+                onDismissRepair={() => setState((s) => ({ ...s, repair: undefined }))}
+              />
             ) : state.running ? (
               <EmptyPanel msg="Running…" />
             ) : (
@@ -412,7 +483,12 @@ function WriteSql(p: {
         {p.seedQuestions.length > 0 && (
           <ChipStrip
             label="examples"
-            items={p.seedQuestions.map((q) => ({ text: q.label, value: q.sql, title: q.why }))}
+            items={p.seedQuestions.map((q) => ({
+              text: q.label,
+              value: q.sql,
+              fullText: q.label,
+              help: q.why,
+            }))}
             onPick={p.onChange}
             accent={p.accent}
           />
@@ -430,7 +506,8 @@ function WriteAsk(p: {
   running: boolean;
   canRun: boolean;
   onRun: () => void;
-  error?: string;
+  errorKind?: "cannot_answer" | "failed";
+  errorMessage?: string;
   accent: string;
 }): JSX.Element {
   return (
@@ -441,7 +518,7 @@ function WriteAsk(p: {
           onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
           spellCheck
           placeholder='Ask in plain English. e.g. "Top 10 posts by score this month"'
-          className="absolute inset-0 w-full h-full p-3 text-[13px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
+          className="absolute inset-0 w-full h-full p-3 text-[14px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && p.canRun) p.onRun();
           }}
@@ -454,7 +531,8 @@ function WriteAsk(p: {
             items={p.seedQuestions.map((q) => ({
               text: q.label.toLowerCase(),
               value: q.label,
-              title: q.why,
+              fullText: q.label,
+              help: q.why,
             }))}
             onPick={p.onChange}
             accent={p.accent}
@@ -470,9 +548,27 @@ function WriteAsk(p: {
             </span>
           }
         />
-        {p.error && (
+        {p.errorKind === "cannot_answer" && (
+          <div
+            className="mx-3 mb-2 px-3 py-2 rounded-md text-[13px] leading-relaxed text-ink-dim"
+            style={{
+              background: "color-mix(in oklab, var(--ink-mute) 12%, transparent)",
+              border: "1px solid var(--seam)",
+            }}
+            role="status"
+          >
+            This question can&apos;t be answered from the data in this scenario. Try a different one
+            — the example chips above are all known to work.
+            {p.errorMessage && (
+              <span className="block mt-1 text-[12px] text-ink-mute">
+                model said: {p.errorMessage}
+              </span>
+            )}
+          </div>
+        )}
+        {p.errorKind === "failed" && (
           <p className="px-3 pb-2 te-label" style={{ color: "var(--accent-fintech)" }}>
-            {p.error}
+            {p.errorMessage ?? "request failed"}
           </p>
         )}
       </div>
@@ -503,6 +599,17 @@ function RunRow(p: {
   );
 }
 
+interface ChipItem {
+  /** Visible text inside the chip — may be truncated by max-width. */
+  text: string;
+  /** Payload passed to onPick when the chip is clicked. */
+  value: string;
+  /** Full label (shown on hover when it differs from the visible text). */
+  fullText?: string;
+  /** Extra explanation rendered under fullText on hover. */
+  help?: string;
+}
+
 function ChipStrip({
   label,
   items,
@@ -510,25 +617,42 @@ function ChipStrip({
   accent,
 }: {
   label: string;
-  items: { text: string; value: string; title?: string }[];
+  items: ChipItem[];
   onPick: (v: string) => void;
   accent: string;
 }): JSX.Element {
   return (
     <div className="px-3 py-1.5 flex items-center gap-1.5 border-b te-hairline overflow-x-auto">
       <span className="te-label shrink-0 mr-1">{label}</span>
-      {items.map((i) => (
-        <button
-          key={i.text}
-          type="button"
-          onClick={() => onPick(i.value)}
-          className="te-button shrink-0 max-w-[280px] truncate"
-          title={i.title}
-          style={{ borderColor: `var(${accent})`, color: "var(--ink-dim)" }}
-        >
-          {i.text}
-        </button>
-      ))}
+      {items.map((i) => {
+        // Show the tooltip if either the chip text gets truncated (full
+        // text differs from the visible text) or there's a meaningful
+        // help string to surface. Skip empty tooltips so we don't paint
+        // a floating box on hover with nothing in it.
+        const fullText = i.fullText ?? i.text;
+        const isTruncated = fullText !== i.text;
+        const showTip = isTruncated || (i.help && i.help.trim().length > 0);
+        return (
+          <div key={i.text} className="te-tooltip-host shrink-0">
+            <button
+              type="button"
+              onClick={() => onPick(i.value)}
+              className="te-button max-w-[280px] truncate"
+              style={{ borderColor: `var(${accent})`, color: "var(--ink-dim)" }}
+            >
+              {i.text}
+            </button>
+            {showTip && (
+              <span className="te-tooltip">
+                <span className="block text-ink">{fullText}</span>
+                {i.help && i.help.trim().length > 0 && (
+                  <span className="block mt-1 text-ink-dim font-normal">{i.help}</span>
+                )}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -628,6 +752,91 @@ function AiDrawer(p: {
           <span>esc to close</span>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function FailedSqlPanel(p: {
+  error: string;
+  repair: RepairResult | undefined;
+  repairing: boolean;
+  onFixWithAi: () => void;
+  onApplyRepair: () => void;
+  onDismissRepair: () => void;
+}): JSX.Element {
+  return (
+    <div className="h-full overflow-auto p-4">
+      <p className="te-label" style={{ color: "var(--accent-fintech)" }}>
+        your query didn&apos;t run
+      </p>
+      <pre className="mt-2 te-mono text-[12.5px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+        {p.error}
+      </pre>
+
+      {!p.repair && !p.repairing && (
+        <button
+          type="button"
+          onClick={p.onFixWithAi}
+          className="mt-3 te-button te-button-primary"
+          title="Ask gpt-4.1-mini to explain the error and suggest a corrected SELECT"
+        >
+          <Sparkles size={12} />
+          FIX WITH AI
+        </button>
+      )}
+      {p.repairing && (
+        <div className="mt-3 space-y-2">
+          <div className="h-3.5 te-panel w-3/4" />
+          <div className="h-3.5 te-panel w-2/3" />
+          <div className="h-3.5 te-panel w-1/2" />
+        </div>
+      )}
+      {p.repair && (
+        <section
+          className="mt-4 te-panel p-3"
+          style={{ borderLeftWidth: 2, borderLeftColor: "var(--ink-dim)" }}
+        >
+          <div className="te-label flex items-center gap-2">
+            <Sparkles size={11} /> ai suggestion
+          </div>
+          {p.repair.error === "CANNOT_ANSWER" ? (
+            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+              The AI couldn&apos;t turn this into a working SELECT against the scenario&apos;s
+              schema. Try rephrasing or pick an example chip on the left.
+              {p.repair.why && (
+                <span className="block mt-1 text-[12px] text-ink-mute">
+                  model said: {p.repair.why}
+                </span>
+              )}
+            </p>
+          ) : (
+            <>
+              {p.repair.why && (
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{p.repair.why}</p>
+              )}
+              {p.repair.sql && (
+                <pre className="mt-2 te-panel p-2 te-mono text-[12px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+                  {p.repair.sql}
+                </pre>
+              )}
+            </>
+          )}
+          <div className="mt-3 flex gap-1.5">
+            {p.repair.sql && (
+              <button
+                type="button"
+                onClick={p.onApplyRepair}
+                className="te-button te-button-primary"
+              >
+                USE THIS
+              </button>
+            )}
+            <button type="button" onClick={p.onDismissRepair} className="te-button">
+              DISMISS
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

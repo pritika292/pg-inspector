@@ -36,8 +36,17 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--surface)] text-ink overflow-x-hidden">
-      <header className="te-panel border-b flex items-center justify-between px-5 py-3">
+    <div className="relative min-h-screen flex flex-col bg-[var(--surface)] text-ink overflow-x-hidden">
+      {/* Ambient gradient behind the page that the glass cards refract.
+          Pointer-events disabled so it never blocks clicks. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[640px]
+          bg-[radial-gradient(120%_60%_at_50%_0%,rgba(182,155,255,0.18),transparent_60%),
+              radial-gradient(80%_50%_at_85%_10%,rgba(62,224,240,0.14),transparent_70%),
+              radial-gradient(80%_50%_at_15%_15%,rgba(255,161,74,0.10),transparent_70%)]"
+      />
+      <header className="te-panel border-b !rounded-none flex items-center justify-between px-5 py-3">
         <span className="te-label-md text-ink">pg-inspector</span>
         <div className="flex gap-2">
           <button type="button" onClick={onAbout} className="te-button">
@@ -91,12 +100,15 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
             {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="te-panel p-7 md:p-8">
+                <div
+                  key={f.title}
+                  className="te-glass p-7 md:p-8 transition-transform hover:-translate-y-0.5"
+                >
                   <div className="flex items-center gap-2.5">
-                    <Icon size={18} className="text-ink-dim" />
+                    <Icon size={20} className="text-ink-dim" />
                     <span className="te-label-md text-ink">{f.title}</span>
                   </div>
-                  <p className="mt-4 text-[15px] md:text-base leading-relaxed text-ink-dim">
+                  <p className="mt-4 text-base md:text-[17px] leading-relaxed text-ink-dim">
                     {f.body}
                   </p>
                 </div>
@@ -117,11 +129,11 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
             {(scenarios ?? []).map((s) => (
               <div
                 key={s.slug}
-                className="te-panel p-4"
-                style={{ borderLeftWidth: 2, borderLeftColor: `var(${s.accentVar})` }}
+                className="te-glass p-4 transition-transform hover:-translate-y-0.5"
+                style={{ borderLeftWidth: 3, borderLeftColor: `var(${s.accentVar})` }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="te-mono text-[13px] uppercase tracking-widest text-ink">
+                  <span className="te-mono text-[14px] font-semibold uppercase tracking-widest text-ink">
                     {s.name}
                   </span>
                   <span
@@ -130,16 +142,16 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
                     style={{ background: `var(${s.accentVar})` }}
                   />
                 </div>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim min-h-[44px]">
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-dim min-h-[44px]">
                   {s.tagline}
                 </p>
-                <div className="mt-3 text-[11px] te-mono uppercase tracking-widest text-ink-mute tabular">
+                <div className="mt-3 text-[12px] te-mono uppercase tracking-widest text-ink-mute tabular">
                   {s.industryAnalog}
                 </div>
               </div>
             ))}
             {!scenarios && (
-              <div className="te-panel p-4 col-span-5 te-label-md text-ink-mute">
+              <div className="te-glass p-4 col-span-5 te-label-md text-ink-mute">
                 loading scenarios…
               </div>
             )}
@@ -148,32 +160,32 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
 
         {/* Credibility band */}
         <section className="max-w-5xl mx-auto px-6 py-16">
-          <div className="te-panel p-7 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="te-glass p-7 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-start gap-3.5">
-              <ShieldCheck size={20} className="text-ink-dim shrink-0 mt-0.5" />
+              <ShieldCheck size={22} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
                 <div className="te-label-md text-ink">three SQL safety layers</div>
-                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
+                <p className="mt-2 text-base leading-relaxed text-ink-dim">
                   Read-only Postgres role · AST validator · per-query transaction with search_path
                   and statement_timeout scoped to the chosen scenario.
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3.5">
-              <KeyRound size={20} className="text-ink-dim shrink-0 mt-0.5" />
+              <KeyRound size={22} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
                 <div className="te-label-md text-ink">no AI API keys</div>
-                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
+                <p className="mt-2 text-base leading-relaxed text-ink-dim">
                   Azure OpenAI authentication uses the VM's Managed Identity. Zero secret bytes in
                   the repo, in CI, or in any env file.
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3.5">
-              <Database size={20} className="text-ink-dim shrink-0 mt-0.5" />
+              <Database size={22} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
                 <div className="te-label-md text-ink">honest modeling</div>
-                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
+                <p className="mt-2 text-base leading-relaxed text-ink-dim">
                   Intra-scenario FKs are real Postgres foreign keys. Cross-scenario references are
                   soft (informational comments, not enforced); the visualizer shows that honestly
                   with dashed edges.
@@ -205,7 +217,7 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
         </section>
       </main>
 
-      <footer className="te-panel border-t px-6 py-4 flex items-center justify-between text-ink-mute">
+      <footer className="te-panel border-t !rounded-none px-6 py-4 flex items-center justify-between text-ink-mute">
         <span className="te-label">demo by pritika priyadarshini</span>
         <div className="flex gap-4 te-label">
           <button type="button" onClick={onAbout} className="hover:text-ink-dim">

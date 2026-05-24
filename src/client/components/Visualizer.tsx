@@ -228,7 +228,7 @@ export function Visualizer({ scenario, onTableClick }: Props): JSX.Element {
   }, [schema, scenario.accentVar, onTableClick]);
 
   return (
-    <div className="te-panel border-l border-r h-full relative te-fade-in">
+    <div className="te-panel !rounded-none border-l border-r h-full relative te-fade-in">
       {!schema && !error && (
         <div className="absolute inset-0 grid place-items-center te-label">loading schema…</div>
       )}
@@ -273,6 +273,23 @@ export function Visualizer({ scenario, onTableClick }: Props): JSX.Element {
               ?
             </button>
           )}
+          {/* Permanent affordance hint (#112). Top-center, pointer-events
+              disabled so it never blocks pan / select on the canvas.
+              Stays visible regardless of HelpCard state — survives dismissal. */}
+          <div
+            className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none z-10
+              te-panel px-3 py-1.5 flex items-center gap-2 max-w-[calc(100%-1.5rem)]"
+            style={{ borderLeftWidth: 2, borderLeftColor: `var(${scenario.accentVar})` }}
+            aria-hidden
+          >
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: `var(${scenario.accentVar})` }}
+            />
+            <span className="te-mono text-[12px] uppercase tracking-widest text-ink-dim truncate">
+              click on a DB to view data preview
+            </span>
+          </div>
         </>
       )}
     </div>
@@ -310,12 +327,12 @@ function HelpCard({ accentVar, onClose }: { accentVar: string; onClose: () => vo
         {steps.map((s) => (
           <li key={s.label}>
             <div
-              className="te-mono text-[10px] uppercase tracking-widest"
+              className="te-mono text-[11px] uppercase tracking-widest"
               style={{ color: `var(${accentVar})` }}
             >
               {s.label}
             </div>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">{s.body}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-dim">{s.body}</p>
           </li>
         ))}
       </ul>

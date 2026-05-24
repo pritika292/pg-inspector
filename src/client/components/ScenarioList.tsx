@@ -27,7 +27,7 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
   }, []);
 
   return (
-    <aside className="te-panel border-r overflow-y-auto h-full flex flex-col">
+    <aside className="te-panel !rounded-none border-r overflow-y-auto h-full flex flex-col">
       <div className="px-4 py-2.5 border-b te-hairline">
         <span className="te-label-md text-ink">scenarios</span>
       </div>

@@ -171,4 +171,63 @@ describe.skipIf(!dbUrl)("/api/query/{nl-to-sql,explain-ai,advise}", () => {
     expect(res.body.error).toBe("CANNOT_ANSWER");
     expect(call).toBe(1); // didn't call advise step
   });
+
+  // ─── /api/query/repair (#114) ────────────────────────────────────────
+
+  it("POST /api/query/repair returns a corrected SELECT + reason", async () => {
+    setAiClientForTests(
+      makeFake({
+        chat: () => `WHY
+The column score doesn't exist on users; it's on posts.
+
+FIX
+select title, score from posts order by score desc limit 10`,
+      }),
+    );
+    const res = await request(app).post("/api/query/repair").send({
+      scenarioSlug: "social_media",
+      sql: "SELECT score FROM users",
+      error: 'column "score" does not exist',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.sql).toMatch(/select title, score/i);
+    expect(res.body.why).toMatch(/score doesn't exist/);
+  });
+
+  it("POST /api/query/repair passes through CANNOT_ANSWER", async () => {
+    setAiClientForTests(
+      makeFake({
+        chat: () => `WHY
+No login timestamps exist anywhere in this schema.
+
+FIX
+CANNOT_ANSWER no login-related column exists`,
+      }),
+    );
+    const res = await request(app).post("/api/query/repair").send({
+      scenarioSlug: "social_media",
+      sql: "SELECT last_login FROM users",
+      error: 'column "last_login" does not exist',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.error).toBe("CANNOT_ANSWER");
+  });
+
+  it("POST /api/query/repair returns 429 on budget exhaustion", async () => {
+    setAiClientForTests(makeFake({ throwBudget: true }));
+    const res = await request(app).post("/api/query/repair").send({
+      scenarioSlug: "social_media",
+      sql: "SELECT 1",
+      error: "anything",
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it("POST /api/query/repair rejects unknown scenario", async () => {
+    setAiClientForTests(makeFake({ chat: () => "WHY x\nFIX\nselect 1" }));
+    const res = await request(app)
+      .post("/api/query/repair")
+      .send({ scenarioSlug: "missing", sql: "SELECT 1", error: "x" });
+    expect(res.status).toBe(404);
+  });
 });

@@ -57,7 +57,9 @@ body {
   /* Slightly heavier than browser default 400. Inter ships a 'cv11'
      stylistic alternate that pairs nicely with this weight. */
   font-weight: 450;
-  font-size: 15px;
+  /* Bumped 15 -> 16 (#113). Every component that inherits picks up the
+     change without per-class edits. */
+  font-size: 16px;
   line-height: 1.55;
 }
 
@@ -93,12 +95,25 @@ h4 {
   .te-panel {
     background: var(--surface-elevated);
     border: 1px solid var(--seam);
+    /* Default corner rounding for cards/panels (#109/#110). Components
+       that need square corners (e.g. nested toolbox panes that share a
+       seam) override with rounded-none on the inner element. */
+    border-radius: 0.5rem; /* rounded-lg */
+  }
+  /* Glass treatment for landing-page cards (#109): subtle backdrop blur +
+     a lower-opacity surface so the gradient bleed behind shows through. */
+  .te-glass {
+    background: color-mix(in oklab, var(--surface-elevated) 78%, transparent);
+    border: 1px solid var(--seam);
+    border-radius: 0.75rem; /* rounded-xl */
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
   }
   .te-hairline {
     border-color: var(--seam);
   }
   .te-button {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-sm font-mono text-[11px] uppercase tracking-widest transition-colors;
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-widest transition-colors;
     color: var(--ink);
     border: 1px solid var(--seam);
     background: transparent;
@@ -220,6 +235,52 @@ h4 {
 .react-flow__node-default {
   background: transparent;
   border: none;
+}
+
+/* ─── Hover tooltip (chip overflow reveal, #110) ───────────────────────── */
+
+/* Pattern: a `.te-tooltip-host` wrapper with `position: relative`, an
+   ellipsis-truncated child, and a sibling `.te-tooltip` that becomes
+   visible on hover/focus. Uses CSS-only so we don't need a popover lib. */
+.te-tooltip-host {
+  position: relative;
+}
+.te-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  max-width: 360px;
+  padding: 0.5rem 0.625rem;
+  background: var(--surface-elevated);
+  color: var(--ink);
+  border: 1px solid var(--seam);
+  border-radius: 0.375rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 0s linear 120ms;
+  pointer-events: none;
+}
+.te-tooltip-host:hover .te-tooltip,
+.te-tooltip-host:focus-within .te-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-tooltip {
+    transition: none;
+  }
 }
 
 /* ─── Subtle motion ───────────────────────────────────────────────────── */

@@ -32,8 +32,10 @@ export default {
         widest: "0.18em",
       },
       fontSize: {
-        "te-label": ["0.625rem", { lineHeight: "1.2", letterSpacing: "0.18em" }],
-        "te-label-md": ["0.75rem", { lineHeight: "1.2", letterSpacing: "0.16em" }],
+        // One-notch bump (was 10 / 12) to lift legibility across labels
+        // app-wide without an audit of every component (#113).
+        "te-label": ["0.75rem", { lineHeight: "1.2", letterSpacing: "0.18em" }],
+        "te-label-md": ["0.875rem", { lineHeight: "1.2", letterSpacing: "0.16em" }],
       },
     },
   },

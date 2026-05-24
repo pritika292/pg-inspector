@@ -40,13 +40,13 @@ export function TableNode({ data }: NodeProps<TableNodeData>): JSX.Element {
         className="px-2.5 py-1.5 border-b te-hairline flex items-center justify-between"
         style={{ borderLeftWidth: "2px", borderLeftColor: `var(${accentVar})` }}
       >
-        <span className="te-mono text-[10px] uppercase tracking-widest text-ink">{table.name}</span>
-        <span className="te-mono text-[9px] uppercase tracking-widest text-ink-mute tabular">
+        <span className="te-mono text-[12px] uppercase tracking-widest text-ink">{table.name}</span>
+        <span className="te-mono text-[11px] uppercase tracking-widest text-ink-mute tabular">
           {table.rowCount.toLocaleString()}
         </span>
       </div>
 
-      <ul className="text-[11px] leading-tight">
+      <ul className="text-[12px] leading-tight">
         {table.columns.slice(0, 8).map((c) => (
           <li
             key={c.name}
@@ -70,7 +70,7 @@ export function TableNode({ data }: NodeProps<TableNodeData>): JSX.Element {
                 </span>
               )}
             </span>
-            <span className="te-mono text-[10px] text-ink-mute">{c.dataType}</span>
+            <span className="te-mono text-[11px] text-ink-mute">{c.dataType}</span>
           </li>
         ))}
         {table.columns.length > 8 && (
