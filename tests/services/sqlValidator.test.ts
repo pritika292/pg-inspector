@@ -79,4 +79,82 @@ describe("validateSelectOnly", () => {
   it("rejects empty input", () => {
     reject("", /empty/);
   });
+
+  it("rejects whitespace-only input", () => {
+    reject("   \n  \t  ", /empty/);
+  });
+
+  it("accepts SELECT ending with a single trailing semicolon", () => {
+    accept("SELECT 1;");
+    accept("SELECT 1;\n");
+    accept("SELECT 1;   ");
+  });
+
+  it("accepts SELECT with leading/trailing whitespace", () => {
+    accept("  SELECT 1  ");
+    accept("\n\nSELECT 1\n\n");
+  });
+
+  it("accepts SELECT with leading and trailing block comments", () => {
+    accept("/* preamble */ SELECT 1");
+    accept("SELECT 1 /* trailing */");
+  });
+
+  it("accepts SELECT with line comment at the end", () => {
+    accept("SELECT 1 -- ok");
+  });
+
+  it("accepts WITH RECURSIVE that walks a SELECT", () => {
+    accept(
+      "WITH RECURSIVE t(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM t WHERE n < 5) SELECT * FROM t",
+    );
+  });
+
+  it("accepts SELECT with window functions + DISTINCT ON", () => {
+    accept(
+      "SELECT DISTINCT ON (author_id) author_id, score, " +
+        "ROW_NUMBER() OVER (PARTITION BY author_id ORDER BY score DESC) AS rn " +
+        "FROM posts ORDER BY author_id, score DESC",
+    );
+  });
+
+  it("accepts SELECT with UNION ALL", () => {
+    accept("SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3");
+  });
+
+  it("rejects VALUES (non-SELECT statement type)", () => {
+    reject("VALUES (1, 2, 3)", /not allowed|values/i);
+  });
+
+  it("rejects SHOW (Postgres meta-command)", () => {
+    reject("SHOW search_path", /not allowed/);
+  });
+
+  it("rejects MERGE", () => {
+    reject(
+      "MERGE INTO posts USING orders ON 1=1 WHEN MATCHED THEN DO NOTHING",
+      /not allowed|parse/i,
+    );
+  });
+
+  it("rejects COPY", () => {
+    reject("COPY posts TO STDOUT", /not allowed|parse/i);
+  });
+
+  it("rejects multi-statement even with leading/trailing whitespace", () => {
+    reject("  SELECT 1;  SELECT 2;  ", /multiple statements/);
+  });
+
+  it("rejects modifying CTE inside RECURSIVE WITH", () => {
+    reject(
+      "WITH RECURSIVE x AS (DELETE FROM posts RETURNING id) SELECT * FROM x",
+      /must be a SELECT|parse/i,
+    );
+  });
+
+  it("rejects user-prefixed EXPLAIN (we add EXPLAIN ourselves; double-EXPLAIN parses funny)", () => {
+    // pgsql-ast-parser rejects bare EXPLAIN; even if it didn't, the wrap layer
+    // would produce SELECT * FROM (EXPLAIN ANALYZE ...) which Postgres rejects.
+    reject("EXPLAIN SELECT 1", /parse|not allowed/i);
+  });
 });
