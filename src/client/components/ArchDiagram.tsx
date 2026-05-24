@@ -1,11 +1,11 @@
-// Hand-positioned SVG diagram of the pg-inspector request flow (#123).
-// React Flow would be overkill for one static diagram on the About page;
-// plain SVG keeps the bundle small and tracks the dark theme for free.
+// Hand-positioned SVG diagram of the pg-inspector request flow.
+// Sized for full-width display on the About page so labels stay legible
+// at typical viewport widths.
 
 export function ArchDiagram(): JSX.Element {
   return (
     <svg
-      viewBox="0 0 540 320"
+      viewBox="0 0 960 460"
       className="block w-full h-auto"
       role="img"
       aria-label="pg-inspector flow: browser sends SQL or natural-language to Express; AST validator + read-only role + safe runner gate the query; Postgres returns rows; Azure OpenAI generates SQL via Managed Identity."
@@ -26,40 +26,57 @@ export function ArchDiagram(): JSX.Element {
       </defs>
 
       {/* Browser */}
-      <Box x={10} y={130} w={120} h={50} label="browser" subLabel="React + react-flow" />
+      <Box x={20} y={180} w={200} h={70} label="browser" subLabel="React + react-flow" />
 
-      {/* Express on :3014 */}
-      <Box x={200} y={130} w={140} h={50} label="Express :3014" subLabel="route + cache" accent />
+      {/* Express on :3014 (the centerpiece) */}
+      <Box
+        x={290}
+        y={180}
+        w={260}
+        h={70}
+        label="Express :3014"
+        subLabel="route · cache · helmet"
+        accent
+      />
 
-      {/* The three safety layers, stacked */}
-      <Box x={380} y={10} w={150} h={50} label="layer 1" subLabel="pg role inspector_ro" />
-      <Box x={380} y={80} w={150} h={50} label="layer 2" subLabel="AST validator (pgsql-ast)" />
-      <Box x={380} y={150} w={150} h={50} label="layer 3" subLabel="BEGIN READ ONLY + LIMIT" />
+      {/* The three safety layers, stacked on the right of Express */}
+      <Box x={620} y={20} w={320} h={60} label="layer 1" subLabel="pg role inspector_ro" />
+      <Box x={620} y={100} w={320} h={60} label="layer 2" subLabel="AST validator (pgsql-ast)" />
+      <Box x={620} y={180} w={320} h={60} label="layer 3" subLabel="BEGIN READ ONLY · LIMIT" />
 
       {/* Postgres */}
-      <Box x={380} y={230} w={150} h={50} label="Postgres 16" subLabel="5 scenario schemas" />
+      <Box
+        x={620}
+        y={290}
+        w={320}
+        h={60}
+        label="Postgres 16"
+        subLabel="5 scenario schemas · ~75K rows"
+      />
 
-      {/* OpenAI side */}
-      <Box x={10} y={10} w={120} h={50} label="Azure OpenAI" subLabel="gpt-4.1-mini" dashed />
-      <Box x={10} y={240} w={120} h={50} label="Managed Identity" subLabel="no API keys" dashed />
+      {/* AI side */}
+      <Box x={20} y={20} w={200} h={70} label="Azure OpenAI" subLabel="gpt-4.1-mini" dashed />
+      <Box x={20} y={310} w={200} h={70} label="Managed Identity" subLabel="no API keys" dashed />
 
       {/* Edges */}
-      <Edge from={[130, 155]} to={[200, 155]} both />
+      {/* browser <-> express */}
+      <Edge from={[220, 215]} to={[290, 215]} both />
 
-      {/* express -> 3 layers + postgres */}
-      <Edge from={[340, 145]} to={[380, 35]} />
-      <Edge from={[340, 150]} to={[380, 105]} />
-      <Edge from={[340, 155]} to={[380, 175]} />
-      <Edge from={[340, 170]} to={[380, 255]} />
+      {/* express -> 3 layers */}
+      <Edge from={[550, 205]} to={[620, 50]} />
+      <Edge from={[550, 210]} to={[620, 130]} />
+      <Edge from={[550, 215]} to={[620, 210]} />
+      {/* express -> postgres */}
+      <Edge from={[550, 240]} to={[620, 320]} />
 
-      {/* express <- openai */}
-      <Edge from={[70, 60]} to={[200, 140]} dashed />
-      {/* express -> managed identity */}
-      <Edge from={[70, 240]} to={[200, 170]} dashed />
+      {/* express <- azure openai (dashed: AI side flow) */}
+      <Edge from={[120, 90]} to={[290, 195]} dashed />
+      {/* managed identity -> express */}
+      <Edge from={[120, 310]} to={[290, 240]} dashed />
 
       {/* Caption */}
-      <text x={270} y={310} textAnchor="middle" className="fill-ink-mute font-mono" fontSize={10}>
-        ── solid: query path · - - dashed: AI + auth side-flows
+      <text x={480} y={445} textAnchor="middle" className="fill-ink-mute font-mono" fontSize={13}>
+        ── solid: query path - - dashed: AI + auth side-flows
       </text>
     </svg>
   );
@@ -89,7 +106,7 @@ function Box({
     : dashed
       ? "stroke-seam"
       : "stroke-ink-mute";
-  const dashAttr = dashed ? "4 3" : undefined;
+  const dashAttr = dashed ? "6 4" : undefined;
   return (
     <g>
       <rect
@@ -97,28 +114,29 @@ function Box({
         y={y}
         width={w}
         height={h}
-        rx={3}
-        ry={3}
+        rx={6}
+        ry={6}
         className={`fill-transparent ${stroke}`}
-        strokeWidth={1}
+        strokeWidth={1.5}
         strokeDasharray={dashAttr}
       />
       <text
         x={x + w / 2}
-        y={subLabel === undefined ? y + h / 2 + 4 : y + h / 2 - 1}
+        y={subLabel === undefined ? y + h / 2 + 6 : y + h / 2 - 4}
         textAnchor="middle"
         className={accent ? "fill-[var(--accent-fintech)] font-mono" : "fill-ink font-mono"}
-        fontSize={11}
+        fontSize={accent ? 18 : 16}
+        fontWeight={accent ? 600 : 500}
       >
         {label}
       </text>
       {subLabel !== undefined && (
         <text
           x={x + w / 2}
-          y={y + h / 2 + 12}
+          y={y + h / 2 + 16}
           textAnchor="middle"
           className="fill-ink-mute font-mono"
-          fontSize={9}
+          fontSize={12}
         >
           {subLabel}
         </text>
@@ -138,7 +156,7 @@ function Edge({
   dashed?: boolean;
   both?: boolean;
 }): JSX.Element {
-  const dashAttr = dashed ? "4 3" : undefined;
+  const dashAttr = dashed ? "6 4" : undefined;
   return (
     <line
       x1={from[0]}
@@ -146,7 +164,7 @@ function Edge({
       x2={to[0]}
       y2={to[1]}
       className="stroke-ink-mute"
-      strokeWidth={1}
+      strokeWidth={1.75}
       strokeDasharray={dashAttr}
       markerEnd="url(#arrow)"
       markerStart={both ? "url(#arrow)" : undefined}

@@ -39,11 +39,21 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
             </h1>
           </header>
 
-          <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Full-width architecture diagram. Used to live inside the
+              middle column and was too small to read. Now spans the page
+              so labels and edges are legible at typical viewport widths. */}
+          <section className="mt-10 te-panel p-6 lg:p-8">
+            <p className="te-label">architecture</p>
+            <div className="mt-4">
+              <ArchDiagram />
+            </div>
+          </section>
+
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Left: story */}
             <section className="space-y-6">
               <p className="te-label">story</p>
-              <p className="text-[15px] leading-relaxed text-ink-dim">
+              <p className="text-[15px] leading-relaxed text-justify text-ink-dim">
                 A data-engineering sandbox. Five named-industry scenarios, each a multi-schema
                 Postgres database with realistic seeded data. Explore the schema visually, write SQL
                 or generate it from English, see query plans, and get schema-improvement
@@ -51,7 +61,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
               </p>
               <section className="space-y-2">
                 <h2 className="te-label-md">how the SQL stays safe</h2>
-                <p className="text-[14px] leading-relaxed text-ink-dim">
+                <p className="text-[14px] leading-relaxed text-justify text-ink-dim">
                   Three layers, defense in depth. (1) A dedicated read-only Postgres role (
                   <code className="font-mono text-ink">inspector_ro</code>) with no
                   INSERT/UPDATE/DELETE/CREATE/etc. on any scenario schema. (2) An AST validator (
@@ -68,7 +78,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
               </section>
               <section className="space-y-2">
                 <h2 className="te-label-md">the soft-reference idea</h2>
-                <p className="text-[14px] leading-relaxed text-ink-dim">
+                <p className="text-[14px] leading-relaxed text-justify text-ink-dim">
                   Inside each scenario, schemas reference each other with real Postgres foreign keys
                   (rendered as solid edges in the visualizer). Across scenarios, references are
                   &ldquo;soft&rdquo;: informational columns with a{" "}
@@ -80,7 +90,7 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
               </section>
               <section className="space-y-2">
                 <h2 className="te-label-md">the AI side</h2>
-                <p className="text-[14px] leading-relaxed text-ink-dim">
+                <p className="text-[14px] leading-relaxed text-justify text-ink-dim">
                   <code className="font-mono text-ink">gpt-4.1-mini</code> on Azure OpenAI.
                   Authentication is via Managed Identity; the VM&apos;s System-Assigned identity has
                   Cognitive Services User on the AI resource so the runtime never holds an API key.
@@ -105,12 +115,9 @@ export function About({ onBack }: { onBack: () => void }): JSX.Element {
               </section>
             </section>
 
-            {/* Middle: diagram + tech */}
+            {/* Middle: tech list (diagram moved to its own full-width section above). */}
             <section className="space-y-6">
               <p className="te-label">tech</p>
-              <div className="te-panel p-5">
-                <ArchDiagram />
-              </div>
               <dl className="space-y-3">
                 {TECH.map((t) => (
                   <div key={t.name}>
