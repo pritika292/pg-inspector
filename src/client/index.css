@@ -222,6 +222,38 @@ h4 {
   }
 }
 
+/* Emerald pulse for the primary RUN button while idle. Stops once a
+   query has been run so this doesn't compete with the red READING & FIX
+   pulse on the OUTPUT pane. (#135) */
+.te-pulse-run {
+  animation: te-pulse-run-glow 1.4s ease-in-out infinite;
+}
+@keyframes te-pulse-run-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(52, 211, 153, 0.32);
+    transform: scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-pulse-run {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.4);
+  }
+}
+
+/* RUN sits visually heavier than the other te-buttons around it. (#135) */
+.te-button-run {
+  font-size: 14px;
+  padding: 10px 18px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
 /* ─── Drawer slide-in ──────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: no-preference) {
