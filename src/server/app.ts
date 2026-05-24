@@ -9,8 +9,22 @@ import { scenariosRouter } from "./routes/scenarios.js";
 import { queryRouter } from "./routes/queryRun.js";
 import { queryAiRouter } from "./routes/queryAi.js";
 
-const CLIENT_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../client");
 const SPA_PATHS = ["/", "/about"];
+
+// Resolve the built-client directory. In production (running from dist/),
+// it's at ../client. In tests/dev (running TypeScript from src/), the built
+// client lives at ../../dist/client. Try the prod layout first; fall back
+// to the source-relative layout for vitest.
+function findClientDist(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const prodLayout = path.resolve(here, "../client");
+  if (existsSync(path.join(prodLayout, "assets"))) return prodLayout;
+  const sourceLayout = path.resolve(here, "../../dist/client");
+  if (existsSync(path.join(sourceLayout, "assets"))) return sourceLayout;
+  return prodLayout; // both will fail the assets check downstream
+}
+
+const CLIENT_DIST = findClientDist();
 
 export interface AppOptions {
   enableRateLimit?: boolean;
@@ -44,12 +58,16 @@ export function createApp(opts: AppOptions = {}): Express {
 
   // Serve the built SPA when it's present. In dev, vite at :5173 handles the
   // SPA and /api is proxied to :3014.
+  //
+  // Gate on dist/client/assets, not dist/client/index.html. When tests run
+  // from source via vitest, `import.meta.url` resolves to src/server/app.ts
+  // so CLIENT_DIST ends up as src/client (an existing dir with index.html).
+  // The post-build assets/ dir only exists in dist/client, so checking for
+  // it is the unambiguous test.
   const indexHtml = path.join(CLIENT_DIST, "index.html");
-  if (existsSync(indexHtml)) {
-    app.use(
-      "/assets",
-      express.static(path.join(CLIENT_DIST, "assets"), { immutable: true, maxAge: "1y" }),
-    );
+  const assetsDir = path.join(CLIENT_DIST, "assets");
+  if (existsSync(indexHtml) && existsSync(assetsDir)) {
+    app.use("/assets", express.static(assetsDir, { immutable: true, maxAge: "1y" }));
     for (const p of SPA_PATHS) {
       app.get(p, (_req, res) => {
         res.sendFile(indexHtml);

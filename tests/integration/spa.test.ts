@@ -10,7 +10,11 @@ import { createApp } from "../../src/server/app.js";
 // in the test process we resolve it from the repo root instead.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const builtIndex = path.join(repoRoot, "dist", "client", "index.html");
-const haveBuild = existsSync(builtIndex);
+const builtAssets = path.join(repoRoot, "dist", "client", "assets");
+// Match the gate in src/server/app.ts: SPA serving requires both
+// dist/client/index.html AND dist/client/assets — the latter doesn't exist
+// in source, so it disambiguates "ran tsc but not vite" cases.
+const haveBuild = existsSync(builtIndex) && existsSync(builtAssets);
 
 describe.runIf(haveBuild)("GET / (SPA)", () => {
   it("serves dist/client/index.html at /", async () => {
