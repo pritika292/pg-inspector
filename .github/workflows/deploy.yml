@@ -1,0 +1,105 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-pg-inspector
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Write deploy script
+        # az vm run-command runs the inline script under sh (waagent), not bash.
+        # We wrap with `bash -c` for set -o pipefail support, then keep the
+        # rest POSIX-friendly.
+        run: |
+          cat > vm-deploy.sh <<'EOF'
+          #!/bin/sh
+          set -eu
+          PROJECT=pg-inspector
+          TARGET=/opt/pritika/${PROJECT}
+
+          log() { printf '[deploy] %s\n' "$*"; }
+
+          if [ ! -d "$TARGET/.git" ]; then
+            log "First deploy — cloning"
+            git clone --depth 1 https://github.com/pritika292/${PROJECT}.git "$TARGET"
+          else
+            log "Pulling latest main"
+            cd "$TARGET"
+            git fetch --depth 1 origin main
+            git reset --hard origin/main
+          fi
+          cd "$TARGET"
+
+          if [ -x scripts/bootstrap-vm.sh ]; then
+            log "Running bootstrap-vm.sh"
+            bash scripts/bootstrap-vm.sh
+          fi
+
+          log "Building and restarting containers"
+          docker compose pull --quiet 2>/dev/null || true
+          docker compose up -d --build --remove-orphans
+
+          log "Pruning dangling images"
+          docker image prune -f >/dev/null 2>&1 || true
+
+          # Container boots migrations + seeds before listening. Seeds can run
+          # the first time around for ~10s on a cold DB.
+          i=0
+          while [ $i -lt 45 ]; do
+            if curl -fsS -o /dev/null --max-time 3 http://localhost:3014/health; then
+              log "Health check passed: /health returned 2xx"
+              exit 0
+            fi
+            i=$((i + 1))
+            sleep 2
+          done
+          log "ERROR: /health did not return 2xx after 90s"
+          log "Container state:"
+          docker compose ps
+          log "Recent logs:"
+          docker compose logs --tail=80 app || true
+          exit 1
+          EOF
+
+      - name: Deploy via az vm run-command
+        run: |
+          set -eu
+          az vm run-command invoke \
+            --resource-group "${{ vars.AZURE_DEPLOY_RG }}" \
+            --name "${{ vars.AZURE_DEPLOY_VM_NAME }}" \
+            --command-id RunShellScript \
+            --scripts @vm-deploy.sh \
+            --query "value[0].message" -o tsv | tee deploy-output.log
+
+          if grep -q "Health check passed" deploy-output.log; then
+            echo "::notice::pg-inspector deployed and healthy"
+          else
+            echo "::warning::Health probe did not confirm healthy state — verify the VM manually"
+            exit 1
+          fi
