@@ -5,6 +5,7 @@ import { TableView } from "./TableView.js";
 import { PlanTree } from "./PlanTree.js";
 import { AiCommentary } from "./AiCommentary.js";
 import { AdvisePanel } from "./AdvisePanel.js";
+import { AskPanel } from "./AskPanel.js";
 import { apiGet, apiPost, apiPostStream, ApiError } from "../lib/api.js";
 import type {
   AdviseResult,
@@ -19,7 +20,7 @@ interface Props {
   scenario: ScenarioListEntry;
 }
 
-type Tab = "results" | "plan" | "ai" | "advise";
+type Tab = "results" | "plan" | "ai" | "ask" | "advise";
 
 interface State {
   sql: string;
@@ -33,25 +34,31 @@ interface State {
   aiStreaming: boolean;
   advise?: AdviseResult;
   adviseLoading: boolean;
+  askError?: string;
+  askPending: boolean;
 }
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "results", label: "RESULTS" },
   { id: "plan", label: "PLAN" },
   { id: "ai", label: "AI" },
+  { id: "ask", label: "ASK" },
   { id: "advise", label: "ADVISE" },
 ];
 
+const emptyState = (tab: Tab = "results"): State => ({
+  sql: "",
+  running: false,
+  tab,
+  aiText: "",
+  aiStreaming: false,
+  adviseLoading: false,
+  askPending: false,
+});
+
 export function Toolbox({ scenario }: Props): JSX.Element {
   const [schema, setSchema] = useState<ScenarioSchema | undefined>(undefined);
-  const [state, setState] = useState<State>({
-    sql: "",
-    running: false,
-    tab: "results",
-    aiText: "",
-    aiStreaming: false,
-    adviseLoading: false,
-  });
+  const [state, setState] = useState<State>(emptyState());
 
   useEffect(() => {
     let cancelled = false;
@@ -59,14 +66,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
       .then((data) => {
         if (cancelled) return;
         setSchema(data);
-        setState({
-          sql: "",
-          running: false,
-          tab: "results",
-          aiText: "",
-          aiStreaming: false,
-          adviseLoading: false,
-        });
+        setState(emptyState());
       })
       .catch(() => {
         /* errors surface in Visualizer */
@@ -104,27 +104,49 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     }
   }
 
-  async function ask(): Promise<void> {
-    // Tiny prompt: stay in-flow rather than open a modal for v1.
-    const question = window.prompt(`Ask a question about the ${scenario.name} schema:`);
-    if (!question) return;
-    setState((s) => ({ ...s, running: true, tab: "results" }));
+  function openAsk(): void {
+    setState((s) => ({ ...s, tab: "ask", askError: undefined }));
+  }
+
+  function openAdvise(): void {
+    setState((s) => ({ ...s, tab: "advise" }));
+  }
+
+  async function submitAsk(question: string): Promise<void> {
+    setState((s) => ({ ...s, askPending: true, askError: undefined }));
     try {
       const result = await apiPost<NlToSqlResult>("/api/query/nl-to-sql", {
         scenarioSlug: scenario.slug,
         question,
       });
       if (result.sql) {
-        setState((s) => ({ ...s, running: false, sql: result.sql! }));
+        setState((s) => ({ ...s, askPending: false, sql: result.sql!, tab: "results" }));
       } else {
         setState((s) => ({
           ...s,
-          running: false,
-          runError: `${result.error ?? "error"}: ${result.reason ?? ""}`,
+          askPending: false,
+          askError: `${result.error ?? "error"}${result.reason ? `: ${result.reason}` : ""}`,
         }));
       }
     } catch (err) {
-      setState((s) => ({ ...s, running: false, runError: errorMessage(err) }));
+      setState((s) => ({ ...s, askPending: false, askError: errorMessage(err) }));
+    }
+  }
+
+  async function submitAdvise(requirement: string): Promise<void> {
+    setState((s) => ({ ...s, adviseLoading: true, advise: undefined }));
+    try {
+      const result = await apiPost<AdviseResult>("/api/query/advise", {
+        scenarioSlug: scenario.slug,
+        requirement,
+      });
+      setState((s) => ({ ...s, adviseLoading: false, advise: result, sql: result.sql ?? s.sql }));
+    } catch (err) {
+      setState((s) => ({
+        ...s,
+        adviseLoading: false,
+        advise: { error: "request_failed", reason: errorMessage(err) },
+      }));
     }
   }
 
@@ -158,29 +180,8 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     }
   }
 
-  async function advise(): Promise<void> {
-    const requirement = window.prompt(
-      `Describe what you need. The AI will draft SQL, fetch its plan, and suggest schema changes:`,
-    );
-    if (!requirement) return;
-    setState((s) => ({ ...s, adviseLoading: true, tab: "advise" }));
-    try {
-      const result = await apiPost<AdviseResult>("/api/query/advise", {
-        scenarioSlug: scenario.slug,
-        requirement,
-      });
-      setState((s) => ({ ...s, adviseLoading: false, advise: result, sql: result.sql ?? s.sql }));
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        adviseLoading: false,
-        advise: { error: "request_failed", reason: errorMessage(err) },
-      }));
-    }
-  }
-
   return (
-    <div className="te-panel border-t h-[280px] shrink-0 flex">
+    <div className="te-panel border-t h-[300px] shrink-0 flex">
       <div className="w-1/2 flex flex-col min-w-0 border-r te-hairline">
         <QueryEditor
           sql={state.sql}
@@ -189,8 +190,8 @@ export function Toolbox({ scenario }: Props): JSX.Element {
           running={state.running}
           onRun={run}
           onExplain={explain}
-          onAsk={ask}
-          onAdvise={advise}
+          onAsk={openAsk}
+          onAdvise={openAdvise}
           accentVar={scenario.accentVar}
         />
       </div>
@@ -238,17 +239,34 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             (state.runResult ? (
               <TableView result={state.runResult} />
             ) : (
-              <div className="p-3 te-label">no query run yet</div>
+              <div className="p-3 te-label">run a query above to see results here</div>
             ))}
           {state.tab === "plan" &&
             (state.plan ? (
               <PlanTree plan={state.plan} />
             ) : (
-              <div className="p-3 te-label">no plan yet — click EXPLAIN</div>
+              <div className="p-3 te-label">
+                click EXPLAIN above to see how Postgres runs the query
+              </div>
             ))}
           {state.tab === "ai" && <AiCommentary text={state.aiText} streaming={state.aiStreaming} />}
+          {state.tab === "ask" && (
+            <AskPanel
+              scenarioName={scenario.name}
+              pending={state.askPending}
+              accentVar={scenario.accentVar}
+              onSubmit={submitAsk}
+              {...(state.askError ? { lastError: state.askError } : {})}
+            />
+          )}
           {state.tab === "advise" && (
-            <AdvisePanel advise={state.advise} loading={state.adviseLoading} />
+            <AdvisePanel
+              scenarioName={scenario.name}
+              accentVar={scenario.accentVar}
+              advise={state.advise}
+              loading={state.adviseLoading}
+              onSubmit={submitAdvise}
+            />
           )}
         </div>
       </div>
