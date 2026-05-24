@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play, Sparkles, X } from "lucide-react";
 import { TableView } from "./TableView.js";
 import { PlanTree } from "./PlanTree.js";
 import { apiGet, apiPost, apiPostStream, ApiError } from "../lib/api.js";
@@ -33,6 +33,12 @@ interface State {
   aiText: string;
   aiStreaming: boolean;
   aiAttempted: boolean;
+  // Whether the user has acknowledged the new AI reading for the current
+  // plan. Drives the pulse on the READING button — pulses while false,
+  // settles once the drawer has been opened.
+  aiAcknowledged: boolean;
+  // Whether the side drawer over the OUTPUT pane is visible.
+  aiOpen: boolean;
   askError?: string;
 }
 
@@ -45,6 +51,8 @@ const emptyState = (): State => ({
   aiText: "",
   aiStreaming: false,
   aiAttempted: false,
+  aiAcknowledged: false,
+  aiOpen: false,
 });
 
 export function Toolbox({ scenario }: Props): JSX.Element {
@@ -65,17 +73,30 @@ export function Toolbox({ scenario }: Props): JSX.Element {
     };
   }, [scenario.slug]);
 
-  // Auto-stream the AI plan reading the first time PLAN is opened after a
-  // successful EXPLAIN. Lazy on purpose — saves budget for users who only
-  // want raw rows.
+  // Auto-stream the AI plan reading the first time the user opens the
+  // AI drawer for the current plan. Lazy on purpose — saves budget for
+  // users who only want raw rows.
   useEffect(() => {
-    if (state.out !== "plan") return;
+    if (!state.aiOpen) return;
     if (!state.plan) return;
     if (state.aiAttempted) return;
     if (state.aiStreaming) return;
     void streamPlanReading();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.out, state.plan, state.aiAttempted, state.aiStreaming]);
+  }, [state.aiOpen, state.plan, state.aiAttempted, state.aiStreaming]);
+
+  // Close the drawer when the user navigates to a different scenario,
+  // or when a new query starts (handled in runSqlAndExplain).
+
+  // Close on Escape while the drawer is open.
+  useEffect(() => {
+    if (!state.aiOpen) return;
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "Escape") setState((s) => ({ ...s, aiOpen: false }));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state.aiOpen]);
 
   // ─── actions ────────────────────────────────────────────────────────
 
@@ -88,6 +109,8 @@ export function Toolbox({ scenario }: Props): JSX.Element {
       out: "results",
       aiText: "",
       aiAttempted: false,
+      aiAcknowledged: false,
+      aiOpen: false,
     }));
     const [runOutcome, explainOutcome] = await Promise.allSettled([
       apiPost<RunResult>("/api/query/run", { scenarioSlug: scenario.slug, sql: sqlToRun }),
@@ -221,14 +244,35 @@ export function Toolbox({ scenario }: Props): JSX.Element {
       </div>
 
       {/* ──── OUTPUT pane ──── */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
-          <span className="te-label">output</span>
-          <OutTabs
-            tab={state.out}
-            accent={accent}
-            onChange={(t) => setState((s) => ({ ...s, out: t }))}
-          />
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        <div className="px-3 py-2 border-b te-hairline flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="te-label">output</span>
+            <OutTabs
+              tab={state.out}
+              accent={accent}
+              onChange={(t) => setState((s) => ({ ...s, out: t }))}
+            />
+          </div>
+          {state.plan && (
+            <button
+              type="button"
+              onClick={() => setState((s) => ({ ...s, aiOpen: true, aiAcknowledged: true }))}
+              className={clsx(
+                "te-button flex items-center gap-1.5",
+                !state.aiAcknowledged && "te-pulse",
+              )}
+              style={{
+                borderColor: `var(${accent})`,
+                color: "var(--ink)",
+                ["--pulse-color" as never]: `var(${accent})`,
+              }}
+              title="AI plain-English reading + concrete DDL recommendation"
+            >
+              <Sparkles size={12} />
+              READING &amp; FIX
+            </button>
+          )}
         </div>
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -243,17 +287,20 @@ export function Toolbox({ scenario }: Props): JSX.Element {
               <OutputIntro />
             ))}
           {state.out === "plan" && (
-            <PlanView
-              plan={state.plan}
-              planError={state.planError}
-              aiText={state.aiText}
-              aiStreaming={state.aiStreaming}
-              aiAttempted={state.aiAttempted}
-              running={state.running}
-              onRetryAi={streamPlanReading}
-            />
+            <PlanView plan={state.plan} planError={state.planError} running={state.running} />
           )}
         </div>
+
+        {state.aiOpen && (
+          <AiDrawer
+            aiText={state.aiText}
+            aiStreaming={state.aiStreaming}
+            aiAttempted={state.aiAttempted}
+            accent={accent}
+            onClose={() => setState((s) => ({ ...s, aiOpen: false }))}
+            onRegenerate={streamPlanReading}
+          />
+        )}
       </div>
     </div>
   );
@@ -489,68 +536,98 @@ function ChipStrip({
 function PlanView(p: {
   plan: ExplainResult | undefined;
   planError: string | undefined;
-  aiText: string;
-  aiStreaming: boolean;
-  aiAttempted: boolean;
   running: boolean;
-  onRetryAi: () => void;
 }): JSX.Element {
   if (p.running && !p.plan) return <EmptyPanel msg="Running EXPLAIN…" />;
   if (p.planError) return <ErrorPanel msg={p.planError} />;
   if (!p.plan)
     return (
-      <EmptyPanel msg="Hit RUN on a SELECT to see the execution plan and an AI-drafted recommendation here." />
+      <EmptyPanel msg="Hit RUN on a SELECT to see the execution plan. The READING & FIX button (top right) will then surface an AI-drafted recommendation." />
     );
 
   return (
     <div className="h-full overflow-auto">
-      <section className="border-b te-hairline">
-        <div className="px-3 py-2 te-label flex items-center justify-between">
-          <span>execution plan</span>
-          <span className="text-ink-mute normal-case tracking-normal text-[11px]">
-            postgres EXPLAIN ANALYZE
-          </span>
-        </div>
-        <PlanTree plan={p.plan} />
-      </section>
+      <div className="px-3 py-2 te-label flex items-center justify-between border-b te-hairline">
+        <span>execution plan</span>
+        <span className="text-ink-mute normal-case tracking-normal text-[11px]">
+          postgres EXPLAIN ANALYZE
+        </span>
+      </div>
+      <PlanTree plan={p.plan} />
+    </div>
+  );
+}
 
-      <section>
-        <div className="px-3 py-2 te-label flex items-center justify-between sticky top-0 bg-[var(--surface-elevated)] z-10 border-b te-hairline">
-          <span className="flex items-center gap-2">
-            <Sparkles size={11} /> reading &amp; recommendation
+function AiDrawer(p: {
+  aiText: string;
+  aiStreaming: boolean;
+  aiAttempted: boolean;
+  accent: string;
+  onClose: () => void;
+  onRegenerate: () => void;
+}): JSX.Element {
+  return (
+    <div className="absolute inset-0 z-30 flex">
+      {/* Backdrop — click to dismiss */}
+      <button
+        type="button"
+        onClick={p.onClose}
+        aria-label="close AI reading"
+        className="absolute inset-0 bg-black/40 cursor-default"
+      />
+      {/* Sliding panel */}
+      <div
+        className="relative ml-auto w-full max-w-[460px] h-full te-panel border-l flex flex-col te-drawer-enter"
+        style={{ borderLeftColor: `var(${p.accent})`, borderLeftWidth: 2 }}
+        role="dialog"
+        aria-label="AI reading and DDL recommendation"
+      >
+        <header className="px-4 py-2.5 border-b te-hairline flex items-center justify-between">
+          <span className="te-label-md text-ink flex items-center gap-2">
+            <Sparkles size={12} /> reading &amp; recommendation
           </span>
-          {!p.aiStreaming && p.aiAttempted && p.aiText && (
-            <button type="button" onClick={p.onRetryAi} className="te-button">
-              REGENERATE
+          <div className="flex items-center gap-1.5">
+            {!p.aiStreaming && p.aiAttempted && (
+              <button type="button" onClick={p.onRegenerate} className="te-button">
+                REGENERATE
+              </button>
+            )}
+            <button type="button" onClick={p.onClose} className="te-button" aria-label="close">
+              <X size={12} />
             </button>
-          )}
-        </div>
-        {p.aiStreaming && !p.aiText && (
-          <div className="p-4 space-y-2">
-            <div className="h-3.5 te-panel w-3/4" />
-            <div className="h-3.5 te-panel w-2/3" />
-            <div className="h-3.5 te-panel w-1/2" />
           </div>
-        )}
-        {p.aiText && (
-          <div className="p-4">
-            <pre className="te-mono text-[12px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+        </header>
+        <div className="flex-1 overflow-auto p-4">
+          {p.aiStreaming && !p.aiText && (
+            <div className="space-y-2">
+              <div className="h-3.5 te-panel w-3/4" />
+              <div className="h-3.5 te-panel w-2/3" />
+              <div className="h-3.5 te-panel w-1/2" />
+              <div className="h-3.5 te-panel w-5/6" />
+            </div>
+          )}
+          {p.aiText && (
+            <pre className="te-mono text-[12.5px] leading-relaxed text-ink whitespace-pre-wrap break-words">
               {p.aiText}
               {p.aiStreaming && <span className="te-cursor">▍</span>}
             </pre>
-          </div>
-        )}
-        {!p.aiStreaming && p.aiAttempted && !p.aiText && (
-          <div className="p-4">
-            <p className="te-label" style={{ color: "var(--accent-fintech)" }}>
-              AI explanation unavailable. Click REGENERATE to try again.
-            </p>
-            <button type="button" onClick={p.onRetryAi} className="mt-2 te-button">
-              REGENERATE
-            </button>
-          </div>
-        )}
-      </section>
+          )}
+          {!p.aiStreaming && p.aiAttempted && !p.aiText && (
+            <div>
+              <p className="te-label" style={{ color: "var(--accent-fintech)" }}>
+                AI explanation unavailable.
+              </p>
+              <button type="button" onClick={p.onRegenerate} className="mt-2 te-button">
+                REGENERATE
+              </button>
+            </div>
+          )}
+        </div>
+        <footer className="px-4 py-2 border-t te-hairline te-label text-ink-mute flex items-center justify-between">
+          <span>gpt-4.1-mini · 1 of 200/day</span>
+          <span>esc to close</span>
+        </footer>
+      </div>
     </div>
   );
 }
@@ -575,8 +652,10 @@ function OutputIntro(): JSX.Element {
             PLAN
           </span>
           <span className="text-[13px] leading-relaxed text-ink-dim">
-            Postgres&apos; execution-plan tree, a plain-English reading of it, and a concrete index
-            / DDL recommendation.
+            Postgres&apos; execution-plan tree. After RUN, a pulsing{" "}
+            <span className="te-mono">READING &amp; FIX</span> button appears (top right) — click it
+            to open a panel with the AI&apos;s plain-English reading and a concrete index / DDL
+            recommendation.
           </span>
         </li>
       </ul>
