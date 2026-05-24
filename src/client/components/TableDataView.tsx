@@ -7,6 +7,8 @@ interface Props {
   scenarioSlug: string;
   schemaName: string;
   tableName: string;
+  /** CSS var name like "--accent-social". Tints the header. */
+  accentVar: string;
   onClose: () => void;
 }
 
@@ -16,6 +18,7 @@ export function TableDataView({
   scenarioSlug,
   schemaName,
   tableName,
+  accentVar,
   onClose,
 }: Props): JSX.Element {
   const [page, setPage] = useState<TablePage | undefined>(undefined);
@@ -44,8 +47,11 @@ export function TableDataView({
   const last = Math.min(offset + showing, total);
 
   return (
-    <aside className="te-panel !rounded-none border-l flex flex-col h-full te-fade-in min-w-0">
-      <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
+    <aside className="te-panel flex flex-col h-full te-fade-in min-w-0 overflow-hidden">
+      <div
+        className="px-3 py-2 te-header-tint flex items-center justify-between"
+        style={{ ["--header-tint" as never]: `var(${accentVar})` }}
+      >
         <div className="min-w-0">
           <div className="te-label">table</div>
           <div className="te-mono text-[14px] uppercase tracking-widest text-ink truncate">

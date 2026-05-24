@@ -27,8 +27,8 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
   }, []);
 
   return (
-    <aside className="te-panel !rounded-none border-r overflow-y-auto h-full flex flex-col">
-      <div className="px-4 py-2.5 border-b te-hairline">
+    <aside className="te-panel overflow-y-auto h-full flex flex-col">
+      <div className="px-4 py-2.5 te-header-tint">
         <span className="te-label-md text-ink">scenarios</span>
       </div>
 
@@ -43,7 +43,7 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
         <div className="p-3 te-label text-accent-fintech">could not load scenarios; try again</div>
       )}
 
-      <ul className="divide-y te-divider">
+      <ul className="p-2 flex flex-col gap-2">
         {entries?.map((s) => {
           const isActive = activeSlug === s.slug;
           return (
@@ -52,11 +52,18 @@ export function ScenarioList({ activeSlug, onSelect }: Props): JSX.Element {
                 type="button"
                 onClick={() => onSelect(s)}
                 className={clsx(
-                  "w-full text-left px-4 py-4 transition-colors te-fade-in",
-                  "hover:bg-[var(--surface-elevated)]",
-                  isActive && "bg-[var(--surface-elevated)]",
+                  "te-panel w-full text-left px-4 py-3.5 te-fade-in",
+                  "transition-all duration-150 hover:-translate-y-px hover:border-[var(--ink-mute)]",
+                  isActive && "shadow-[0_0_0_1px_var(--ink-dim)_inset]",
                 )}
-                style={isActive ? { borderLeft: `2px solid var(${s.accentVar})` } : undefined}
+                style={{
+                  // Left accent stripe is always visible (subtle when
+                  // inactive, full opacity when active) so the card reads
+                  // as scenario-tinted regardless of hover state.
+                  borderLeftWidth: 3,
+                  borderLeftColor: `var(${s.accentVar})`,
+                  opacity: isActive ? 1 : 0.92,
+                }}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[13px] font-semibold uppercase tracking-widest text-ink">

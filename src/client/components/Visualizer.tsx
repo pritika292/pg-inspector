@@ -228,7 +228,7 @@ export function Visualizer({ scenario, onTableClick }: Props): JSX.Element {
   }, [schema, scenario.accentVar, onTableClick]);
 
   return (
-    <div className="te-panel !rounded-none border-l border-r h-full relative te-fade-in">
+    <div className="te-panel h-full relative te-fade-in overflow-hidden">
       {!schema && !error && (
         <div className="absolute inset-0 grid place-items-center te-label">loading schema…</div>
       )}
