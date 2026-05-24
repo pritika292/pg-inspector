@@ -37,9 +37,9 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--surface)] text-ink overflow-x-hidden">
-      <header className="te-panel border-b flex items-center justify-between px-4 py-2.5">
-        <span className="te-label text-ink">pg-inspector</span>
-        <div className="flex gap-1.5">
+      <header className="te-panel border-b flex items-center justify-between px-5 py-3">
+        <span className="te-label-md text-ink">pg-inspector</span>
+        <div className="flex gap-2">
           <button type="button" onClick={onAbout} className="te-button">
             ABOUT
           </button>
@@ -58,43 +58,47 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="max-w-4xl mx-auto px-6 pt-16 pb-12 text-center">
-          <p className="te-label">data sandbox · public read-only</p>
-          <h1 className="mt-4 font-mono text-3xl md:text-4xl uppercase tracking-widest text-ink leading-tight">
+        <section className="max-w-4xl mx-auto px-6 pt-24 pb-20 md:pt-32 md:pb-24 text-center">
+          <p className="te-label-md">data sandbox · public read-only</p>
+          <h1 className="mt-6 font-mono text-4xl md:text-6xl uppercase tracking-widest text-ink leading-[1.1]">
             five industry schemas,
             <br />
             one Postgres playground
           </h1>
-          <p className="mt-5 max-w-2xl mx-auto text-[15px] leading-relaxed text-ink-dim">
+          <p className="mt-8 max-w-2xl mx-auto text-base md:text-lg leading-relaxed text-ink-dim">
             Visualize multi-schema layouts, write SQL safely against ~75K seeded rows, generate
             queries from English, read EXPLAIN plans, get schema-improvement suggestions. AI runs on
             Azure OpenAI via Managed Identity. No API keys anywhere.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
+          <div className="mt-12 flex items-center justify-center gap-4 flex-wrap">
             <button
               type="button"
               onClick={onTryIt}
-              className="te-button te-button-primary !px-5 !py-2.5"
+              className="te-button te-button-primary !px-7 !py-3 !text-[13px]"
             >
               TRY IT
-              <ArrowRight size={12} />
+              <ArrowRight size={14} />
             </button>
-            <span className="te-label text-ink-mute">no signup · ~10 seconds to first query</span>
+            <span className="te-label-md text-ink-mute">
+              no signup · ~10 seconds to first query
+            </span>
           </div>
         </section>
 
         {/* Features */}
-        <section className="max-w-5xl mx-auto px-6 py-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <section className="max-w-5xl mx-auto px-6 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="te-panel p-5">
-                  <div className="flex items-center gap-2">
-                    <Icon size={14} className="text-ink-dim" />
-                    <span className="te-label text-ink">{f.title}</span>
+                <div key={f.title} className="te-panel p-7 md:p-8">
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={18} className="text-ink-dim" />
+                    <span className="te-label-md text-ink">{f.title}</span>
                   </div>
-                  <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">{f.body}</p>
+                  <p className="mt-4 text-[15px] md:text-base leading-relaxed text-ink-dim">
+                    {f.body}
+                  </p>
                 </div>
               );
             })}
@@ -102,38 +106,40 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
         </section>
 
         {/* Scenarios */}
-        <section className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-baseline justify-between">
-            <span className="te-label">five scenarios</span>
-            <span className="te-label text-ink-mute">3–5 sub-schemas each · ~75K rows total</span>
+        <section className="max-w-5xl mx-auto px-6 py-14">
+          <div className="flex items-baseline justify-between flex-wrap gap-2">
+            <span className="te-label-md text-ink">five scenarios</span>
+            <span className="te-label-md text-ink-mute">
+              3–5 sub-schemas each · ~75K rows total
+            </span>
           </div>
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {(scenarios ?? []).map((s) => (
               <div
                 key={s.slug}
-                className="te-panel p-3"
+                className="te-panel p-4"
                 style={{ borderLeftWidth: 2, borderLeftColor: `var(${s.accentVar})` }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="te-mono text-[11px] uppercase tracking-widest text-ink">
+                  <span className="te-mono text-[13px] uppercase tracking-widest text-ink">
                     {s.name}
                   </span>
                   <span
                     aria-hidden
-                    className="inline-block w-2 h-2 rounded-full"
+                    className="inline-block w-2.5 h-2.5 rounded-full"
                     style={{ background: `var(${s.accentVar})` }}
                   />
                 </div>
-                <p className="mt-1.5 text-[12px] leading-snug text-ink-dim min-h-[40px]">
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-dim min-h-[44px]">
                   {s.tagline}
                 </p>
-                <div className="mt-2 text-[10px] te-mono uppercase tracking-widest text-ink-mute tabular">
+                <div className="mt-3 text-[11px] te-mono uppercase tracking-widest text-ink-mute tabular">
                   {s.industryAnalog}
                 </div>
               </div>
             ))}
             {!scenarios && (
-              <div className="te-panel p-3 col-span-5 te-label text-ink-mute">
+              <div className="te-panel p-4 col-span-5 te-label-md text-ink-mute">
                 loading scenarios…
               </div>
             )}
@@ -141,33 +147,33 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
         </section>
 
         {/* Credibility band */}
-        <section className="max-w-5xl mx-auto px-6 py-10">
-          <div className="te-panel p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-start gap-3">
-              <ShieldCheck size={16} className="text-ink-dim shrink-0 mt-0.5" />
+        <section className="max-w-5xl mx-auto px-6 py-16">
+          <div className="te-panel p-7 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-start gap-3.5">
+              <ShieldCheck size={20} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
-                <div className="te-label text-ink">three SQL safety layers</div>
-                <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
+                <div className="te-label-md text-ink">three SQL safety layers</div>
+                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
                   Read-only Postgres role · AST validator · per-query transaction with search_path
                   and statement_timeout scoped to the chosen scenario.
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <KeyRound size={16} className="text-ink-dim shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3.5">
+              <KeyRound size={20} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
-                <div className="te-label text-ink">no AI API keys</div>
-                <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
+                <div className="te-label-md text-ink">no AI API keys</div>
+                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
                   Azure OpenAI authentication uses the VM's Managed Identity. Zero secret bytes in
                   the repo, in CI, or in any env file.
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <Database size={16} className="text-ink-dim shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3.5">
+              <Database size={20} className="text-ink-dim shrink-0 mt-0.5" />
               <div>
-                <div className="te-label text-ink">honest modeling</div>
-                <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
+                <div className="te-label-md text-ink">honest modeling</div>
+                <p className="mt-2 text-[14px] md:text-[15px] leading-relaxed text-ink-dim">
                   Intra-scenario FKs are real Postgres foreign keys. Cross-scenario references are
                   soft (informational comments, not enforced); the visualizer shows that honestly
                   with dashed edges.
@@ -178,20 +184,22 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
         </section>
 
         {/* Second TRY */}
-        <section className="max-w-3xl mx-auto px-6 py-12 text-center">
-          <h2 className="font-mono text-lg uppercase tracking-widest text-ink">ready?</h2>
-          <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
+        <section className="max-w-3xl mx-auto px-6 py-20 text-center">
+          <h2 className="font-mono text-2xl md:text-3xl uppercase tracking-widest text-ink">
+            ready?
+          </h2>
+          <p className="mt-5 text-base md:text-lg leading-relaxed text-ink-dim">
             Pick a scenario, click a seed-question chip, watch the plan tree highlight the slowest
             node, then ask the AI to suggest an index that would help.
           </p>
-          <div className="mt-6">
+          <div className="mt-9">
             <button
               type="button"
               onClick={onTryIt}
-              className="te-button te-button-primary !px-5 !py-2.5"
+              className="te-button te-button-primary !px-7 !py-3 !text-[13px]"
             >
               TRY IT
-              <ArrowRight size={12} />
+              <ArrowRight size={14} />
             </button>
           </div>
         </section>

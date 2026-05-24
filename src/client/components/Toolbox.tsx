@@ -205,7 +205,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
   const accent = scenario.accentVar;
 
   return (
-    <div className="te-panel border-t h-[320px] shrink-0 flex">
+    <div className="te-panel border-t h-[400px] shrink-0 flex">
       {/* ──── WRITE pane ──── */}
       <div className="w-1/2 flex flex-col min-w-0 border-r te-hairline">
         <div className="px-3 py-2 border-b te-hairline flex items-center justify-between">
@@ -236,7 +236,6 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             pending={state.askPending}
             onSubmit={submitEnglish}
             error={state.askError}
-            scenarioName={scenario.name}
             accent={accent}
           />
         )}
@@ -246,7 +245,6 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             onChange={(requirement) => setState((s) => ({ ...s, requirement }))}
             loading={state.adviseLoading}
             onSubmit={submitRequirement}
-            scenarioName={scenario.name}
             accent={accent}
           />
         )}
@@ -287,7 +285,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             ) : state.runError ? (
               <ErrorPanel msg={state.runError} />
             ) : (
-              <EmptyPanel msg="Run a query in the WRITE pane to see results here." />
+              <OutputIntro />
             ))}
           {state.out === "plan" &&
             (state.plan ? (
@@ -297,7 +295,12 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             ) : (
               <EmptyPanel msg="Click EXPLAIN on a SELECT to see how Postgres will run it." />
             ))}
-          {state.out === "ai" && <AiCommentary text={state.aiText} streaming={state.aiStreaming} />}
+          {state.out === "ai" &&
+            (state.aiText || state.aiStreaming ? (
+              <AiCommentary text={state.aiText} streaming={state.aiStreaming} />
+            ) : (
+              <EmptyPanel msg="Run EXPLAIN on a query, then click EXPLAIN IN ENGLISH (top right) to get a plain-language reading of the plan." />
+            ))}
           {state.out === "advise" && (
             <AdvisePanel
               scenarioName={scenario.name}
@@ -469,61 +472,45 @@ function EnglishMode(p: {
   pending: boolean;
   onSubmit: () => void;
   error?: string;
-  scenarioName: string;
   accent: string;
 }): JSX.Element {
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
-      <p className="text-[12px] leading-relaxed text-ink-dim">
-        Ask in plain English. The AI drafts a Postgres SELECT against{" "}
-        <span className="te-mono">{p.scenarioName}</span>, drops it into the editor (SQL mode), and
-        switches back so you can review and RUN.
-      </p>
-      <textarea
-        value={p.value}
-        onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
-        rows={4}
-        spellCheck
-        placeholder={ENGLISH_EXAMPLES[0]}
-        className="flex-1 te-panel p-2.5 text-[13px] leading-relaxed text-ink bg-transparent resize-none outline-none focus:border-[var(--ink-dim)]"
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") p.onSubmit();
-        }}
-      />
-      <div className="flex flex-wrap gap-1.5">
-        <span className="te-label self-center mr-1">try</span>
-        {ENGLISH_EXAMPLES.map((s) => (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="relative flex-1 min-h-0">
+        <textarea
+          value={p.value}
+          onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
+          spellCheck
+          placeholder={`Ask in plain English. e.g. "${ENGLISH_EXAMPLES[0]}"`}
+          className="absolute inset-0 w-full h-full p-3 text-[13px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") p.onSubmit();
+          }}
+        />
+      </div>
+      <div className="border-t te-hairline">
+        <ChipStrip label="try" items={ENGLISH_EXAMPLES} onPick={p.onChange} accent={p.accent} />
+        <div className="px-3 py-1.5 flex items-center gap-1.5">
           <button
-            key={s}
             type="button"
-            onClick={() => p.onChange(s)}
-            className="te-button"
-            style={{ borderColor: `var(${p.accent})`, color: "var(--ink-dim)" }}
+            disabled={p.pending || p.value.trim().length === 0}
+            onClick={p.onSubmit}
+            className="te-button te-button-primary"
           >
-            {s}
+            <Send size={12} />
+            {p.pending ? "GENERATING…" : "SUBMIT"}
           </button>
-        ))}
+          <span className="te-label text-ink-mute">⌘+Enter · writes to SQL</span>
+          <span className="ml-auto te-label flex items-center gap-1 text-ink-mute">
+            <Sparkles size={10} /> gpt-4.1-mini
+          </span>
+        </div>
+        {p.error && (
+          <p className="px-3 pb-2 te-label" style={{ color: "var(--accent-fintech)" }}>
+            {p.error}
+          </p>
+        )}
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={p.pending || p.value.trim().length === 0}
-          onClick={p.onSubmit}
-          className="te-button te-button-primary"
-        >
-          <Send size={12} />
-          {p.pending ? "GENERATING…" : "SUBMIT"}
-        </button>
-        <span className="te-label text-ink-mute">⌘+Enter</span>
-        <span className="ml-auto te-label flex items-center gap-1 text-ink-mute">
-          <Sparkles size={10} /> gpt-4.1-mini
-        </span>
-      </div>
-      {p.error && (
-        <p className="te-label" style={{ color: "var(--accent-fintech)" }}>
-          {p.error}
-        </p>
-      )}
     </div>
   );
 }
@@ -533,54 +520,97 @@ function RequirementMode(p: {
   onChange: (v: string) => void;
   loading: boolean;
   onSubmit: () => void;
-  scenarioName: string;
   accent: string;
 }): JSX.Element {
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-3 gap-3">
-      <p className="text-[12px] leading-relaxed text-ink-dim">
-        Describe a feature requirement. The AI drafts SQL, runs EXPLAIN against{" "}
-        <span className="te-mono">{p.scenarioName}</span>, and proposes DDL changes (indexes, column
-        adds) to make the plan faster. Nothing is auto-applied. Results land in the ADVISE tab on
-        the right.
-      </p>
-      <textarea
-        value={p.value}
-        onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
-        rows={4}
-        spellCheck
-        placeholder={REQUIREMENT_EXAMPLES[0]}
-        className="flex-1 te-panel p-2.5 text-[13px] leading-relaxed text-ink bg-transparent resize-none outline-none focus:border-[var(--ink-dim)]"
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") p.onSubmit();
-        }}
-      />
-      <div className="flex flex-wrap gap-1.5">
-        <span className="te-label self-center mr-1">try</span>
-        {REQUIREMENT_EXAMPLES.map((s) => (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="relative flex-1 min-h-0">
+        <textarea
+          value={p.value}
+          onChange={(e) => p.onChange(e.target.value.slice(0, 500))}
+          spellCheck
+          placeholder={`Describe a feature requirement. e.g. "${REQUIREMENT_EXAMPLES[0]}"`}
+          className="absolute inset-0 w-full h-full p-3 text-[13px] leading-relaxed text-ink bg-transparent resize-none outline-none placeholder:text-ink-mute"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") p.onSubmit();
+          }}
+        />
+      </div>
+      <div className="border-t te-hairline">
+        <ChipStrip label="try" items={REQUIREMENT_EXAMPLES} onPick={p.onChange} accent={p.accent} />
+        <div className="px-3 py-1.5 flex items-center gap-1.5">
           <button
-            key={s}
             type="button"
-            onClick={() => p.onChange(s)}
-            className="te-button"
-            style={{ borderColor: `var(${p.accent})`, color: "var(--ink-dim)" }}
+            disabled={p.loading || p.value.trim().length === 0}
+            onClick={p.onSubmit}
+            className="te-button te-button-primary"
           >
-            {s}
+            <Wand2 size={12} />
+            {p.loading ? "THINKING…" : "SUBMIT"}
           </button>
-        ))}
+          <span className="te-label text-ink-mute">⌘+Enter · 1 of 200/day budget</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
+    </div>
+  );
+}
+
+function ChipStrip({
+  label,
+  items,
+  onPick,
+  accent,
+}: {
+  label: string;
+  items: string[];
+  onPick: (v: string) => void;
+  accent: string;
+}): JSX.Element {
+  return (
+    <div className="px-3 py-1.5 flex items-center gap-1.5 border-b te-hairline overflow-x-auto">
+      <span className="te-label shrink-0 mr-1">{label}</span>
+      {items.map((s) => (
         <button
+          key={s}
           type="button"
-          disabled={p.loading || p.value.trim().length === 0}
-          onClick={p.onSubmit}
-          className="te-button te-button-primary"
+          onClick={() => onPick(s)}
+          className="te-button shrink-0 max-w-[280px] truncate"
+          title={s}
+          style={{ borderColor: `var(${accent})`, color: "var(--ink-dim)" }}
         >
-          <Wand2 size={12} />
-          {p.loading ? "THINKING…" : "SUBMIT"}
+          {s}
         </button>
-        <span className="te-label text-ink-mute">⌘+Enter · 1 of 200/day budget</span>
-      </div>
+      ))}
+    </div>
+  );
+}
+
+function OutputIntro(): JSX.Element {
+  const items: { tab: string; body: string }[] = [
+    { tab: "RESULTS", body: "Table of rows returned by your SELECT." },
+    { tab: "PLAN", body: "Postgres' execution-plan tree from EXPLAIN ANALYZE." },
+    { tab: "AI", body: "A plain-English reading of the plan tree." },
+    { tab: "ADVISE", body: "Generated SQL + suggested indexes / DDL for a feature requirement." },
+  ];
+  return (
+    <div className="h-full overflow-auto p-5">
+      <p className="text-[13px] leading-relaxed text-ink-dim max-w-prose">
+        This pane shows what comes back from the WRITE side. Pick a mode on the left, then a chip to
+        autofill, then RUN / EXPLAIN / SUBMIT.
+      </p>
+      <ul className="mt-4 space-y-2.5 max-w-prose">
+        {items.map((i) => (
+          <li key={i.tab} className="flex items-start gap-3">
+            <span className="te-mono text-[10px] uppercase tracking-widest text-ink shrink-0 mt-0.5 w-16">
+              {i.tab}
+            </span>
+            <span className="text-[13px] leading-relaxed text-ink-dim">{i.body}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-5 te-label text-ink-mute">
+        tip · the fastest path is SQL mode → click an example chip → RUN.
+      </p>
     </div>
   );
 }
