@@ -104,6 +104,21 @@ export function Toolbox({ scenario }: Props): JSX.Element {
   // Close the drawer when the user navigates to a different scenario,
   // or when a new query starts (handled in runSqlAndExplain).
 
+  // Auto-open the AI drawer the first time the user clicks the PLAN tab
+  // after a successful EXPLAIN. The pulse on the READING & FIX button
+  // wasn't enough to draw attention — opening it directly puts the
+  // payoff right in front of them. They can dismiss, then re-open via
+  // the button if they want it again. `aiAcknowledged` flips on the
+  // first open and stays sticky until the next RUN resets it, so we
+  // don't pop the drawer back open every time they toggle tabs.
+  useEffect(() => {
+    if (state.out !== "plan") return;
+    if (!state.plan) return;
+    if (state.aiAcknowledged) return;
+    if (state.aiOpen) return;
+    setState((s) => ({ ...s, aiOpen: true, aiAcknowledged: true }));
+  }, [state.out, state.plan, state.aiAcknowledged, state.aiOpen]);
+
   // Close on Escape while the drawer is open.
   useEffect(() => {
     if (!state.aiOpen) return;
