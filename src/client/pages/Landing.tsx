@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Database, Sparkles, Wand2, ShieldCheck, KeyRound, Code } from "lucide-react";
+import { ContactStrip } from "../components/ContactStrip.js";
 import { apiGet } from "../lib/api.js";
 import type { ScenarioListEntry } from "../lib/types.js";
 
@@ -46,9 +47,11 @@ export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
               radial-gradient(80%_50%_at_85%_10%,rgba(62,224,240,0.14),transparent_70%),
               radial-gradient(80%_50%_at_15%_15%,rgba(255,161,74,0.10),transparent_70%)]"
       />
-      <header className="te-panel border-b !rounded-none flex items-center justify-between px-5 py-3">
+      <header className="te-panel border-b !rounded-none flex items-center justify-between gap-3 px-5 py-3">
         <span className="te-label-md text-ink">pg-inspector</span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ContactStrip />
+          <span className="te-hairline w-px h-5 border-l mx-1 hidden sm:inline-block" aria-hidden />
           <button type="button" onClick={onAbout} className="te-button">
             ABOUT
           </button>

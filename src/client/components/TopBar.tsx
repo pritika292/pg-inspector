@@ -1,5 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ContactStrip } from "./ContactStrip.js";
 
 const THEME_KEY = "pg-inspector:theme";
 
@@ -51,7 +52,9 @@ export function TopBar({
           {activeScenarioName ?? "select a scenario"}
         </span>
       </div>
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 items-center">
+        <ContactStrip />
+        <span className="te-hairline w-px h-5 border-l mx-1 hidden sm:inline-block" aria-hidden />
         {onAboutClick && (
           <button type="button" onClick={onAboutClick} className="te-button">
             ABOUT
