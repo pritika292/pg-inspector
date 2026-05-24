@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Database, Sparkles, Wand2, ShieldCheck, KeyRound, Code } from "lucide-react";
 import { ContactStrip } from "../components/ContactStrip.js";
+import { useVisitBeacon } from "../hooks/useVisitBeacon.js";
 import { apiGet } from "../lib/api.js";
 import type { ScenarioListEntry } from "../lib/types.js";
 
@@ -29,6 +30,7 @@ const FEATURES = [
 
 export function Landing({ onTryIt, onAbout }: Props): JSX.Element {
   const [scenarios, setScenarios] = useState<ScenarioListEntry[] | undefined>(undefined);
+  useVisitBeacon();
 
   useEffect(() => {
     apiGet<ScenarioListEntry[]>("/api/scenarios")
