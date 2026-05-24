@@ -275,6 +275,11 @@ export function Toolbox({ scenario }: Props): JSX.Element {
   const canRun =
     !state.running &&
     (state.mode === "sql" ? state.sql.trim().length > 0 : state.ask.trim().length > 0);
+  // RUN pulses while it's the obvious next action: the editor has
+  // content and the user has not yet seen a result, error, or plan from
+  // this session. (#135)
+  const runPulse =
+    canRun && !state.plan && !state.runResult && !state.runError && !state.askErrorKind;
 
   return (
     // Two side-by-side rounded cards with a gap between them (#127). Was a
@@ -304,6 +309,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             seedQuestions={schema?.seedQuestions ?? []}
             running={state.running}
             canRun={canRun}
+            pulse={runPulse}
             onRun={handleRun}
             accent={accent}
           />
@@ -314,6 +320,7 @@ export function Toolbox({ scenario }: Props): JSX.Element {
             seedQuestions={schema?.seedQuestions ?? []}
             running={state.running}
             canRun={canRun}
+            pulse={runPulse}
             onRun={handleRun}
             errorKind={state.askErrorKind}
             errorMessage={state.askErrorMessage}
@@ -484,6 +491,7 @@ function WriteSql(p: {
   seedQuestions: { label: string; sql: string; why: string }[];
   running: boolean;
   canRun: boolean;
+  pulse: boolean;
   onRun: () => void;
   accent: string;
 }): JSX.Element {
@@ -516,7 +524,7 @@ function WriteSql(p: {
             accent={p.accent}
           />
         )}
-        <RunRow running={p.running} canRun={p.canRun} onRun={p.onRun} />
+        <RunRow running={p.running} canRun={p.canRun} pulse={p.pulse} onRun={p.onRun} />
       </div>
     </div>
   );
@@ -528,6 +536,7 @@ function WriteAsk(p: {
   seedQuestions: { label: string; sql: string; why: string }[];
   running: boolean;
   canRun: boolean;
+  pulse: boolean;
   onRun: () => void;
   errorKind?: "cannot_answer" | "failed";
   errorMessage?: string;
@@ -564,6 +573,7 @@ function WriteAsk(p: {
         <RunRow
           running={p.running}
           canRun={p.canRun}
+          pulse={p.pulse}
           onRun={p.onRun}
           rightSlot={
             <span className="ml-auto te-label flex items-center gap-1 text-ink-mute">
@@ -602,6 +612,10 @@ function WriteAsk(p: {
 function RunRow(p: {
   running: boolean;
   canRun: boolean;
+  // True when RUN is the most obvious next action: the editor has content
+  // and the user hasn't run a query yet this session. Drives the emerald
+  // pulse. (#135)
+  pulse: boolean;
   onRun: () => void;
   rightSlot?: React.ReactNode;
 }): JSX.Element {
@@ -611,9 +625,10 @@ function RunRow(p: {
         type="button"
         disabled={!p.canRun}
         onClick={p.onRun}
-        className="te-button te-button-primary"
+        title="Run this query (⌘/Ctrl + Enter)"
+        className={clsx("te-button te-button-primary te-button-run", p.pulse && "te-pulse-run")}
       >
-        <Play size={12} />
+        <Play size={14} />
         {p.running ? "RUNNING…" : "RUN"}
       </button>
       <span className="te-label text-ink-mute">⌘+Enter</span>
@@ -843,10 +858,10 @@ function FailedSqlPanel(p: {
         <button
           type="button"
           onClick={p.onFixWithAi}
-          className="mt-3 te-button te-button-primary"
+          className="mt-3 te-button te-button-primary te-button-run te-pulse"
           title="Ask gpt-4.1-mini to explain the error and suggest a corrected SELECT"
         >
-          <Sparkles size={12} />
+          <Sparkles size={14} />
           FIX WITH AI
         </button>
       )}
