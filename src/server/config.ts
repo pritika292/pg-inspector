@@ -29,6 +29,10 @@ const ConfigSchema = z.object({
   AZURE_OPENAI_DEPLOYMENT: z.string().default("gpt-4.1-mini"),
   AZURE_OPENAI_API_VERSION: z.string().default("2024-12-01-preview"),
 
+  // Global hard cap on AI runs per UTC day, enforced in Redis (see
+  // services/dailyLimit.ts). 0 disables the cap. Default 50.
+  AI_DAILY_LIMIT: z.coerce.number().int().nonnegative().default(50),
+
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 

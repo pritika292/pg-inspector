@@ -11,6 +11,11 @@ import { runExplain, SafeRunnerError } from "../services/safeRunner.js";
 
 export const queryAiRouter: Router = Router();
 
+// Shown to the user when the global daily AI-run cap is hit (see
+// services/dailyLimit.ts). The client surfaces `error` as the message.
+const DAILY_LIMIT_MESSAGE =
+  "Daily demo limit reached — pg-inspector runs 50 AI requests per day. Resets at UTC midnight.";
+
 const NlBody = z.object({
   scenarioSlug: z.string().min(1),
   question: z.string().min(3).max(500),
@@ -34,7 +39,7 @@ queryAiRouter.post("/api/query/nl-to-sql", async (req, res) => {
     res.json(result);
   } catch (err) {
     if (err instanceof BudgetExceededError) {
-      res.status(429).json({ error: "budget_exceeded" });
+      res.status(429).json({ error: DAILY_LIMIT_MESSAGE });
       return;
     }
     console.error("[nl-to-sql] unexpected", err);
@@ -77,7 +82,7 @@ queryAiRouter.post("/api/query/explain-ai", async (req, res) => {
   } catch (err) {
     // Stream framing stays uniform: a single error line then done, with 200
     // status (we may have already flushed headers).
-    const message = err instanceof BudgetExceededError ? "budget_exceeded" : "internal";
+    const message = err instanceof BudgetExceededError ? DAILY_LIMIT_MESSAGE : "internal";
     if (err instanceof BudgetExceededError) {
       // Budget check happens inside chatStream; if it threw here, we may have
       // sent the headers. Still write the framed error.
@@ -150,7 +155,7 @@ queryAiRouter.post("/api/query/advise", async (req, res) => {
     res.json({ sql: nlResult.sql, plan, suggestedDdl: advise.suggestedDdl, why: advise.why });
   } catch (err) {
     if (err instanceof BudgetExceededError) {
-      res.status(429).json({ error: "budget_exceeded" });
+      res.status(429).json({ error: DAILY_LIMIT_MESSAGE });
       return;
     }
     console.error("[advise] unexpected", err);
@@ -185,7 +190,7 @@ queryAiRouter.post("/api/query/repair", async (req, res) => {
     res.json(result);
   } catch (err) {
     if (err instanceof BudgetExceededError) {
-      res.status(429).json({ error: "budget_exceeded" });
+      res.status(429).json({ error: DAILY_LIMIT_MESSAGE });
       return;
     }
     console.error("[repair] unexpected", err);

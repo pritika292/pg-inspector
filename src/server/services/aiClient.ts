@@ -2,6 +2,7 @@ import { AzureOpenAI } from "openai";
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 import { config } from "../config.js";
 import { reportAiUsage } from "./aiUsageEmit.js";
+import { reserveDailyAiRun } from "./dailyLimit.js";
 
 // Azure OpenAI client wired through Managed Identity (prod: VM's
 // System-Assigned Identity; local dev: az login user's identity via
@@ -29,38 +30,9 @@ export interface AiClient {
   resetBudgetForTest(): void;
 }
 
-// In-memory daily bucket. Reset at UTC midnight.
-const DAILY_CAP = 200;
-
-class BudgetBucket {
-  private dayKey = todayUtcKey();
-  private used = 0;
-
-  spend(n = 1): void {
-    const today = todayUtcKey();
-    if (today !== this.dayKey) {
-      this.dayKey = today;
-      this.used = 0;
-    }
-    if (this.used + n > DAILY_CAP) throw new BudgetExceededError();
-    this.used += n;
-  }
-
-  remaining(): number {
-    const today = todayUtcKey();
-    if (today !== this.dayKey) return DAILY_CAP;
-    return DAILY_CAP - this.used;
-  }
-
-  reset(): void {
-    this.dayKey = todayUtcKey();
-    this.used = 0;
-  }
-}
-
-function todayUtcKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+// The daily AI-run cap now lives in Redis (see services/dailyLimit.ts) so it
+// survives container restarts. BudgetExceededError is still thrown when the
+// cap is hit, and the routes still map it to a 429.
 
 let singleton: AiClient | undefined;
 
@@ -91,12 +63,11 @@ function makeRealClient(): AiClient {
     endpoint: config.AZURE_OPENAI_ENDPOINT,
   });
 
-  const budget = new BudgetBucket();
   const deployment = config.AZURE_OPENAI_DEPLOYMENT;
 
   return {
     async chat(opts: ChatOptions): Promise<string> {
-      budget.spend(1);
+      if (!(await reserveDailyAiRun())) throw new BudgetExceededError();
       const res = await client.chat.completions.create({
         model: deployment,
         messages: [
@@ -113,7 +84,7 @@ function makeRealClient(): AiClient {
     },
 
     async *chatStream(opts: ChatOptions): AsyncIterable<string> {
-      budget.spend(1);
+      if (!(await reserveDailyAiRun())) throw new BudgetExceededError();
       const stream = await client.chat.completions.create({
         model: deployment,
         messages: [
@@ -139,7 +110,11 @@ function makeRealClient(): AiClient {
       reportAiUsage(deployment, prompt, completion);
     },
 
-    budgetRemaining: () => budget.remaining(),
-    resetBudgetForTest: () => budget.reset(),
+    // budgetRemaining/resetBudgetForTest are retained for the AiClient
+    // interface + test seam. The real cap now lives in Redis (dailyLimit.ts);
+    // the live remaining count isn't cheaply available synchronously here and
+    // isn't used in production, so report the configured ceiling.
+    budgetRemaining: () => config.AI_DAILY_LIMIT,
+    resetBudgetForTest: () => undefined,
   };
 }
