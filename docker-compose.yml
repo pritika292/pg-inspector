@@ -16,8 +16,8 @@ services:
     container_name: pg-inspector
     restart: unless-stopped
     networks: [pritika]
-    expose:
-      - "3014"
+    ports:
+      - "3014:3014"
     env_file:
       - /opt/pritika/_infra/pg-inspector.env
     healthcheck:
